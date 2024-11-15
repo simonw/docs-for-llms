@@ -1,0 +1,3136 @@
+<documents>
+<document index="1">
+<source>docs/aliases.md</source>
+<document_content>
+(aliases)=
+# Model aliases
+
+LLM supports model aliases, which allow you to refer to a model by a short name instead of its full ID.
+
+## Listing aliases
+
+To list current aliases, run this:
+
+```bash
+llm aliases
+```
+Example output:
+
+<!-- [[[cog
+from click.testing import CliRunner
+from llm.cli import cli
+result = CliRunner().invoke(cli, ["aliases", "list"])
+cog.out("```\n{}```".format(result.output))
+]]] -->
+```
+4o                  : gpt-4o
+4o-mini             : gpt-4o-mini
+3.5                 : gpt-3.5-turbo
+chatgpt             : gpt-3.5-turbo
+chatgpt-16k         : gpt-3.5-turbo-16k
+3.5-16k             : gpt-3.5-turbo-16k
+4                   : gpt-4
+gpt4                : gpt-4
+4-32k               : gpt-4-32k
+gpt-4-turbo-preview : gpt-4-turbo
+4-turbo             : gpt-4-turbo
+4t                  : gpt-4-turbo
+3.5-instruct        : gpt-3.5-turbo-instruct
+chatgpt-instruct    : gpt-3.5-turbo-instruct
+ada                 : ada-002 (embedding)
+```
+<!-- [[[end]]] -->
+
+Add `--json` to get that list back as JSON:
+
+```bash
+llm aliases list --json
+```
+Example output:
+```json
+{
+    "3.5": "gpt-3.5-turbo",
+    "chatgpt": "gpt-3.5-turbo",
+    "chatgpt-16k": "gpt-3.5-turbo-16k",
+    "3.5-16k": "gpt-3.5-turbo-16k",
+    "4": "gpt-4",
+    "gpt4": "gpt-4",
+    "4-32k": "gpt-4-32k",
+    "ada": "ada-002"
+}
+```
+
+## Adding a new alias
+
+The `llm aliases set <alias> <model-id>` command can be used to add a new alias:
+
+```bash
+llm aliases set turbo gpt-3.5-turbo-16k
+```
+Now you can run the `gpt-3.5-turbo-16k` model using the `turbo` alias like this:
+
+```bash
+llm -m turbo 'An epic Greek-style saga about a cheesecake that builds a SQL database from scratch'
+```
+Aliases can be set for both regular models and {ref}`embedding models <embeddings>` using the same command. To set an alias of `oai` for the OpenAI `ada-002` embedding model use this:
+```bash
+llm aliases set oai ada-002
+```
+Now you can embed a string using that model like so:
+```bash
+llm embed -c 'hello world' -m oai
+```
+Output:
+```
+[-0.014945968054234982, 0.0014304015785455704, ...]
+```
+
+## Removing an alias
+
+The `llm aliases remove <alias>` command will remove the specified alias:
+
+```bash
+llm aliases remove turbo
+```
+
+## Viewing the aliases file
+
+Aliases are stored in an `aliases.json` file in the LLM configuration directory.
+
+To see the path to that file, run this:
+
+```bash
+llm aliases path
+```
+To view the content of that file, run this:
+
+```bash
+cat "$(llm aliases path)"
+```
+</document_content>
+</document>
+<document index="2">
+<source>docs/changelog.md</source>
+<document_content>
+# Changelog
+
+(v0_18a0)=
+## 0.18a0 (2024-11-13)
+
+Alpha support for **async models**. [#507](https://github.com/simonw/llm/issues/507)
+
+Multiple [smaller changes](https://github.com/simonw/llm/compare/0.17.1...0.18a0).
+
+(v0_17)=
+## 0.17 (2024-10-29)
+
+Support for **attachments**, allowing multi-modal models to accept images, audio, video and other formats. [#578](https://github.com/simonw/llm/issues/578)
+
+The default OpenAI `gpt-4o` and `gpt-4o-mini` models can both now be prompted with JPEG, GIF, PNG and WEBP images.
+
+Attachments {ref}`in the CLI <usage-attachments>` can be URLs:
+
+```bash
+llm -m gpt-4o "describe this image" \
+  -a https://static.simonwillison.net/static/2024/pelicans.jpg
+```
+Or file paths:
+```bash
+llm -m gpt-4o-mini "extract text" -a image1.jpg -a image2.jpg
+```
+Or binary data, which may need to use `--attachment-type` to specify the MIME type:
+```bash
+cat image | llm -m gpt-4o-mini "extract text" --attachment-type - image/jpeg
+```
+
+Attachments are also available {ref}`in the Python API <python-api-attachments>`:
+
+```python
+model = llm.get_model("gpt-4o-mini")
+response = model.prompt(
+    "Describe these images",
+    attachments=[
+        llm.Attachment(path="pelican.jpg"),
+        llm.Attachment(url="https://static.simonwillison.net/static/2024/pelicans.jpg"),
+    ]
+)
+```
+Plugins that provide alternative models can support attachments, see {ref}`advanced-model-plugins-attachments` for details.
+
+The latest **[llm-claude-3](https://github.com/simonw/llm-claude-3)** plugin now supports attachments for Anthropic's Claude 3 and 3.5 models. The **[llm-gemini](https://github.com/simonw/llm-gemini)** plugin supports attachments for Google's Gemini 1.5 models.
+
+Also in this release: OpenAI models now record their `"usage"` data in the database even when the response was streamed. These records can be viewed using `llm logs --json`. [#591](https://github.com/simonw/llm/issues/591)
+
+(v0_17a0)=
+## 0.17a0 (2024-10-28)
+
+Alpha support for **attachments**. [#578](https://github.com/simonw/llm/issues/578)
+
+(v0_16)=
+## 0.16 (2024-09-12)
+
+- OpenAI models now use the internal `self.get_key()` mechanism, which means they can be used from Python code in a way that will pick up keys that have been configured using `llm keys set` or the `OPENAI_API_KEY` environment variable. [#552](https://github.com/simonw/llm/issues/552). This code now works correctly:
+    ```python
+    import llm
+    print(llm.get_model("gpt-4o-mini").prompt("hi"))
+    ```
+- New documented API methods: `llm.get_default_model()`, `llm.set_default_model(alias)`, `llm.get_default_embedding_model(alias)`, `llm.set_default_embedding_model()`. [#553](https://github.com/simonw/llm/issues/553)
+- Support for OpenAI's new [o1 family](https://openai.com/o1/) of preview models, `llm -m o1-preview "prompt"` and `llm -m o1-mini "prompt"`. These models are currently only available to [tier 5](https://platform.openai.com/docs/guides/rate-limits/usage-tiers?context=tier-five) OpenAI API users, though this may change in the future. [#570](https://github.com/simonw/llm/issues/570)
+
+(v0_15)=
+## 0.15 (2024-07-18)
+
+- Support for OpenAI's [new GPT-4o mini](https://openai.com/index/gpt-4o-mini-advancing-cost-efficient-intelligence/) model: `llm -m gpt-4o-mini 'rave about pelicans in French'` [#536](https://github.com/simonw/llm/issues/536)
+- `gpt-4o-mini` is now the default model if you do not {ref}`specify your own default <setup-default-model>`, replacing GPT-3.5 Turbo. GPT-4o mini is both cheaper and better than GPT-3.5 Turbo.
+- Fixed a bug where `llm logs -q 'flourish' -m haiku` could not combine both the `-q` search query and the `-m` model specifier. [#515](https://github.com/simonw/llm/issues/515)
+
+(v0_14)=
+## 0.14 (2024-05-13)
+
+- Support for OpenAI's [new GPT-4o](https://openai.com/index/hello-gpt-4o/) model: `llm -m gpt-4o 'say hi in Spanish'` [#490](https://github.com/simonw/llm/issues/490)
+- The `gpt-4-turbo` alias is now a model ID, which indicates the latest version of OpenAI's GPT-4 Turbo text and image model. Your existing `logs.db` database may contain records under the previous model ID of `gpt-4-turbo-preview`. [#493](https://github.com/simonw/llm/issues/493)
+- New `llm logs -r/--response` option for outputting just the last captured response, without wrapping it in Markdown and accompanying it with the prompt. [#431](https://github.com/simonw/llm/issues/431)
+- Nine new {ref}`plugins <plugin-directory>` since version 0.13:
+  - **[llm-claude-3](https://github.com/simonw/llm-claude-3)** supporting Anthropic's [Claude 3 family](https://www.anthropic.com/news/claude-3-family) of models.
+  - **[llm-command-r](https://github.com/simonw/llm-command-r)** supporting Cohere's Command R and [Command R Plus](https://txt.cohere.com/command-r-plus-microsoft-azure/) API models.
+  - **[llm-reka](https://github.com/simonw/llm-reka)** supports the [Reka](https://www.reka.ai/) family of models via their API.
+  - **[llm-perplexity](https://github.com/hex/llm-perplexity)** by Alexandru Geana supporting the [Perplexity Labs](https://docs.perplexity.ai/) API models, including `llama-3-sonar-large-32k-online` which can search for things online and `llama-3-70b-instruct`.
+  - **[llm-groq](https://github.com/angerman/llm-groq)** by Moritz Angermann providing access to fast models hosted by [Groq](https://console.groq.com/docs/models).
+  - **[llm-fireworks](https://github.com/simonw/llm-fireworks)** supporting models hosted by [Fireworks AI](https://fireworks.ai/).
+  - **[llm-together](https://github.com/wearedevx/llm-together)** adds support for the [Together AI](https://www.together.ai/) extensive family of hosted openly licensed models.
+  - **[llm-embed-onnx](https://github.com/simonw/llm-embed-onnx)** provides seven embedding models that can be executed using the ONNX model framework.
+  - **[llm-cmd](https://github.com/simonw/llm-cmd)** accepts a prompt for a shell command, runs that prompt and populates the result in your shell so you can review it, edit it and then hit `<enter>` to execute or `ctrl+c` to cancel, see [this post for details](https://simonwillison.net/2024/Mar/26/llm-cmd/).
+
+(v0_13_1)=
+## 0.13.1 (2024-01-26)
+
+- Fix for `No module named 'readline'` error on Windows. [#407](https://github.com/simonw/llm/issues/407)
+
+(v0_13)=
+## 0.13 (2024-01-26)
+
+See also [LLM 0.13: The annotated release notes](https://simonwillison.net/2024/Jan/26/llm/).
+
+- Added support for new OpenAI embedding models: `3-small` and `3-large` and three variants of those with different dimension sizes, 
+`3-small-512`, `3-large-256` and `3-large-1024`. See {ref}`OpenAI embedding models <openai-models-embedding>` for details. [#394](https://github.com/simonw/llm/issues/394)
+- The default `gpt-4-turbo` model alias now points to `gpt-4-turbo-preview`, which uses the most recent OpenAI GPT-4 turbo model (currently `gpt-4-0125-preview`). [#396](https://github.com/simonw/llm/issues/396)
+- New OpenAI model aliases `gpt-4-1106-preview` and `gpt-4-0125-preview`.
+- OpenAI models now support a `-o json_object 1` option which will cause their output to be returned as a valid JSON object. [#373](https://github.com/simonw/llm/issues/373)
+- New {ref}`plugins <plugin-directory>` since the last release include [llm-mistral](https://github.com/simonw/llm-mistral), [llm-gemini](https://github.com/simonw/llm-gemini), [llm-ollama](https://github.com/taketwo/llm-ollama) and [llm-bedrock-meta](https://github.com/flabat/llm-bedrock-meta).
+- The `keys.json` file for storing API keys is now created with `600` file permissions. [#351](https://github.com/simonw/llm/issues/351)
+- Documented {ref}`a pattern <homebrew-warning>` for installing plugins that depend on PyTorch using the Homebrew version of LLM, despite Homebrew using Python 3.12 when PyTorch have not yet released a stable package for that Python version. [#397](https://github.com/simonw/llm/issues/397)
+- Underlying OpenAI Python library has been upgraded to `>1.0`. It is possible this could cause compatibility issues with LLM plugins that also depend on that library. [#325](https://github.com/simonw/llm/issues/325)
+- Arrow keys now work inside the `llm chat` command. [#376](https://github.com/simonw/llm/issues/376)
+- `LLM_OPENAI_SHOW_RESPONSES=1` environment variable now outputs much more detailed information about the HTTP request and response made to OpenAI (and OpenAI-compatible) APIs. [#404](https://github.com/simonw/llm/issues/404)
+- Dropped support for Python 3.7.
+
+(v0_12)=
+## 0.12 (2023-11-06)
+
+- Support for the [new GPT-4 Turbo model](https://openai.com/blog/new-models-and-developer-products-announced-at-devday) from OpenAI. Try it using `llm chat -m gpt-4-turbo` or `llm chat -m 4t`. [#323](https://github.com/simonw/llm/issues/323)
+- New `-o seed 1` option for OpenAI models which sets a seed that can attempt to evaluate the prompt deterministically. [#324](https://github.com/simonw/llm/issues/324)
+
+(v0_11_2)=
+## 0.11.2 (2023-11-06)
+
+- Pin to version of OpenAI Python library prior to 1.0 to avoid breaking. [#327](https://github.com/simonw/llm/issues/327)
+
+(v0_11_1)=
+## 0.11.1 (2023-10-31)
+
+- Fixed a bug where `llm embed -c "text"` did not correctly pick up the configured {ref}`default embedding model <embeddings-cli-embed-models-default>`. [#317](https://github.com/simonw/llm/issues/317)
+- New plugins: [llm-python](https://github.com/simonw/llm-python), [llm-bedrock-anthropic](https://github.com/sblakey/llm-bedrock-anthropic) and [llm-embed-jina](https://github.com/simonw/llm-embed-jina) (described in [Execute Jina embeddings with a CLI using llm-embed-jina](https://simonwillison.net/2023/Oct/26/llm-embed-jina/)).
+- [llm-gpt4all](https://github.com/simonw/llm-gpt4all) now uses the new GGUF model format. [simonw/llm-gpt4all#16](https://github.com/simonw/llm-gpt4all/issues/16)
+
+(v0_11)=
+## 0.11 (2023-09-18)
+
+LLM now supports the new OpenAI `gpt-3.5-turbo-instruct` model, and OpenAI completion (as opposed to chat completion) models in general. [#284](https://github.com/simonw/llm/issues/284)
+
+```bash
+llm -m gpt-3.5-turbo-instruct 'Reasons to tame a wild beaver:'
+```
+OpenAI completion models like this support a `-o logprobs 3` option, which accepts a number between 1 and 5 and will include the log probabilities (for each produced token, what were the top 3 options considered by the model) in the logged response.
+
+```bash
+llm -m gpt-3.5-turbo-instruct 'Say hello succinctly' -o logprobs 3
+```
+You can then view the `logprobs` that were recorded in the SQLite logs database like this:
+```bash
+sqlite-utils "$(llm logs path)" \
+  'select * from responses order by id desc limit 1' | \
+  jq '.[0].response_json' -r | jq
+```
+Truncated output looks like this:
+```
+  [
+    {
+      "text": "Hi",
+      "top_logprobs": [
+        {
+          "Hi": -0.13706253,
+          "Hello": -2.3714375,
+          "Hey": -3.3714373
+        }
+      ]
+    },
+    {
+      "text": " there",
+      "top_logprobs": [
+        {
+          " there": -0.96057636,
+          "!\"": -0.5855763,
+          ".\"": -3.2574513
+        }
+      ]
+    }
+  ]
+```
+Also in this release:
+
+- The `llm.user_dir()` function, used by plugins, now ensures the directory exists before returning it. [#275](https://github.com/simonw/llm/issues/275)
+- New `LLM_OPENAI_SHOW_RESPONSES=1` environment variable for displaying the full HTTP response returned by OpenAI compatible APIs. [#286](https://github.com/simonw/llm/issues/286)
+- The `llm embed-multi` command now has a `--batch-size X` option for setting the batch size to use when processing embeddings - useful if you have limited memory available. [#273](https://github.com/simonw/llm/issues/273)
+- The `collection.embed_multi()` method also now accepts an optional `batch_size=int` argument.
+- Fixed two bugs with `llm embed-multi --files` relating to handling of directories. Thanks, [ealvar3z](https://github.com/ealvar3z). [#274](https://github.com/simonw/llm/issues/274), [#280](https://github.com/simonw/llm/issues/280)
+
+(v0_10)=
+## 0.10 (2023-09-12)
+
+The two major features in this release are the **{ref}`llm chat command <usage-chat>`** and support for **embedding binary data**.
+
+See [Build an image search engine with llm-clip, chat with models with llm chat](https://simonwillison.net/2023/Sep/12/llm-clip-and-chat/) for more background on these features.
+
+### llm chat
+
+The new `llm chat` command starts an ongoing chat conversation with a model in your terminal. It works with all models supported by LLM and its {ref}`plugins <plugins>`, including locally installed models such as Llama 2. [#231](https://github.com/simonw/llm/issues/231)
+
+This offers a big performance boost for local models, since they don't need to be freshly loaded into memory for each prompt.
+
+Here's an example chat with Llama 2 13B, provided by the [llm-mlc](https://github.com/simonw/llm-mlc) plugin.
+
+```bash
+llm chat -m mlc-chat-Llama-2-13b-chat-hf-q4f16_1
+```
+This starts a chat session:
+```
+Type 'exit' or 'quit' to exit
+Type '!multi' to enter multiple lines, then '!end' to finish
+> Who are you?
+Hello! I'm just an AI, here to assist you with any questions you may have.
+My name is LLaMA, and I'm a large language model trained to provide helpful
+and informative responses to a wide range of questions and topics. I'm here
+to help you find the information you need, while ensuring a safe and
+respectful conversation. Please feel free to ask me anything, and I'll do my
+best to provide a helpful and accurate response.
+> Tell me a joke about otters
+Sure, here's a joke about otters:
+
+Why did the otter go to the party?
+
+Because he heard it was a "whale" of a time!
+
+(Get it? Whale, like a big sea mammal, but also a "wild" or "fun" time.
+Otters are known for their playful and social nature, so it's a lighthearted
+and silly joke.)
+
+I hope that brought a smile to your face! Do you have any other questions or
+topics you'd like to discuss?
+> exit
+```
+Chat sessions are {ref}`logged to SQLite <logging>` - use `llm logs` to view them. They can accept system prompts, templates and model options - consult {ref}`the chat documentation <usage-chat>` for details.
+
+### Binary embedding support
+
+LLM's {ref}`embeddings feature <embeddings>` has been expanded to provide support for embedding binary data, in addition to text. [#254](https://github.com/simonw/llm/pull/254)
+
+This enables models like [CLIP](https://openai.com/research/clip), supported by the new **[llm-clip](https://github.com/simonw/llm-clip)** plugin.
+
+CLIP is a multi-modal embedding model which can embed images and text into the same vector space. This means you can use it to create an embedding index of photos, and then search for the embedding vector for "a happy dog" and get back images that are semantically closest to that string.
+
+To create embeddings for every JPEG in a directory stored in a `photos` collection, run:
+
+```bash
+llm install llm-clip
+llm embed-multi photos --files photos/ '*.jpg' --binary -m clip
+```
+Now you can search for photos of raccoons using:
+```
+llm similar photos -c 'raccoon'
+```
+This spits out a list of images, ranked by how similar they are to the string "raccoon":
+```
+{"id": "IMG_4801.jpeg", "score": 0.28125139257127457, "content": null, "metadata": null}
+{"id": "IMG_4656.jpeg", "score": 0.26626441704164294, "content": null, "metadata": null}
+{"id": "IMG_2944.jpeg", "score": 0.2647445926996852, "content": null, "metadata": null}
+...
+```
+
+### Also in this release
+
+- The {ref}`LLM_LOAD_PLUGINS environment variable <llm-load-plugins>` can be used to control which plugins are loaded when `llm` starts running. [#256](https://github.com/simonw/llm/issues/256)
+- The `llm plugins --all` option includes builtin plugins in the list of plugins. [#259](https://github.com/simonw/llm/issues/259)
+- The `llm embed-db` family of commands has been renamed to `llm collections`. [#229](https://github.com/simonw/llm/issues/229)
+- `llm embed-multi --files` now has an `--encoding` option and defaults to falling back to `latin-1` if a file cannot be processed as `utf-8`. [#225](https://github.com/simonw/llm/issues/225)
+
+(v0_10_a1)=
+## 0.10a1 (2023-09-11)
+
+- Support for embedding binary data. [#254](https://github.com/simonw/llm/pull/254)
+- `llm chat` now works for models with API keys. [#247](https://github.com/simonw/llm/issues/247)
+- `llm chat -o` for passing options to a model. [#244](https://github.com/simonw/llm/issues/244)
+- `llm chat --no-stream` option. [#248](https://github.com/simonw/llm/issues/248)
+- `LLM_LOAD_PLUGINS` environment variable. [#256](https://github.com/simonw/llm/issues/256)
+- `llm plugins --all` option for including builtin plugins. [#259](https://github.com/simonw/llm/issues/259)
+- `llm embed-db` has been renamed to `llm collections`. [#229](https://github.com/simonw/llm/issues/229)
+- Fixed bug where `llm embed -c` option was treated as a filepath, not a string. Thanks, [mhalle](https://github.com/mhalle). [#263](https://github.com/simonw/llm/pull/263)
+
+(v0_10_a0)=
+## 0.10a0 (2023-09-04)
+
+- New {ref}`llm chat <usage-chat>` command for starting an interactive terminal chat with a model. [#231](https://github.com/simonw/llm/issues/231)
+- `llm embed-multi --files` now has an `--encoding` option and defaults to falling back to `latin-1` if a file cannot be processed as `utf-8`. [#225](https://github.com/simonw/llm/issues/225)
+
+(v0_9)=
+## 0.9 (2023-09-03)
+
+The big new feature in this release is support for **embeddings**. See [LLM now provides tools for working with embeddings](https://simonwillison.net/2023/Sep/4/llm-embeddings/) for additional details.
+
+{ref}`Embedding models <embeddings>` take a piece of text - a word, sentence, paragraph or even a whole article, and convert that into an array of floating point numbers. [#185](https://github.com/simonw/llm/issues/185)
+
+This embedding vector can be thought of as representing a position in many-dimensional-space, where the distance between two vectors represents how semantically similar they are to each other within the content of a language model.
+
+Embeddings can be used to find **related documents**, and also to implement **semantic search** - where a user can search for a phrase and get back results that are semantically similar to that phrase even if they do not share any exact keywords.
+
+LLM now provides both CLI and Python APIs for working with embeddings. Embedding models are defined by plugins, so you can install additional models using the {ref}`plugins mechanism <installing-plugins>`.
+
+The first two embedding models supported by LLM are:
+
+- OpenAI's [ada-002](https://platform.openai.com/docs/guides/embeddings) embedding model, available via an inexpensive API if you set an OpenAI key using `llm keys set openai`.
+- The [sentence-transformers](https://www.sbert.net/) family of models, available via the new [llm-sentence-transformers](https://github.com/simonw/llm-sentence-transformers) plugin.
+
+See {ref}`embeddings-cli` for detailed instructions on working with embeddings using LLM.
+
+The new commands for working with embeddings are:
+
+- **{ref}`llm embed <embeddings-cli-embed>`** - calculate embeddings for content and return them to the console or store them in a SQLite database.
+- **{ref}`llm embed-multi <embeddings-cli-embed-multi>`** - run bulk embeddings for multiple strings, using input from a CSV, TSV or JSON file, data from a SQLite database or data found by scanning the filesystem. [#215](https://github.com/simonw/llm/issues/215)
+- **{ref}`llm similar <embeddings-cli-similar>`** - run similarity searches against your stored embeddings - starting with a search phrase or finding content related to a previously stored vector. [#190](https://github.com/simonw/llm/issues/190)
+- **{ref}`llm embed-models <embeddings-cli-embed-models>`** - list available embedding models.
+- `llm embed-db` - commands for inspecting and working with the default embeddings SQLite database.
+
+There's also a new {ref}`llm.Collection <embeddings-python-collections>` class for creating and searching collections of embedding from Python code, and a {ref}`llm.get_embedding_model() <embeddings-python-api>` interface for embedding strings directly. [#191](https://github.com/simonw/llm/issues/191)
+
+(v0_8_1)=
+## 0.8.1 (2023-08-31)
+
+- Fixed bug where first prompt would show an error if the `io.datasette.llm` directory had not yet been created. [#193](https://github.com/simonw/llm/issues/193)
+- Updated documentation to recommend a different `llm-gpt4all` model since the one we were using is no longer available. [#195](https://github.com/simonw/llm/issues/195)
+
+(v0_8)=
+## 0.8 (2023-08-20)
+
+- The output format for `llm logs` has changed. Previously it was JSON - it's now a much more readable Markdown format suitable for pasting into other documents. [#160](https://github.com/simonw/llm/issues/160)
+  - The new `llm logs --json` option can be used to get the old JSON format.
+  - Pass `llm logs --conversation ID` or `--cid ID` to see the full logs for a specific conversation.
+- You can now combine piped input and a prompt in a single command: `cat script.py | llm 'explain this code'`. This works even for models that do not support {ref}`system prompts <system-prompts>`. [#153](https://github.com/simonw/llm/issues/153)
+- Additional {ref}`openai-compatible-models` can now be configured with custom HTTP headers. This enables platforms such as [openrouter.ai](https://openrouter.ai/) to be used with LLM, which can provide Claude access even without an Anthropic API key.
+- Keys set in `keys.json` are now used in preference to environment variables. [#158](https://github.com/simonw/llm/issues/158)
+- The documentation now includes a {ref}`plugin directory <plugin-directory>` listing all available plugins for LLM. [#173](https://github.com/simonw/llm/issues/173)
+- New {ref}`related tools <related-tools>` section in the documentation describing `ttok`, `strip-tags` and `symbex`. [#111](https://github.com/simonw/llm/issues/111)
+- The `llm models`, `llm aliases` and `llm templates` commands now default to running the same command as `llm models list` and `llm aliases list` and `llm templates list`. [#167](https://github.com/simonw/llm/issues/167)
+- New `llm keys` (aka `llm keys list`) command for listing the names of all configured keys. [#174](https://github.com/simonw/llm/issues/174)
+- Two new Python API functions, `llm.set_alias(alias, model_id)` and `llm.remove_alias(alias)` can be used to configure aliases from within Python code. [#154](https://github.com/simonw/llm/pull/154)
+- LLM is now compatible with both Pydantic 1 and Pydantic 2. This means you can install `llm` as a Python dependency in a project that depends on Pydantic 1 without running into dependency conflicts. Thanks, [Chris Mungall](https://github.com/cmungall). [#147](https://github.com/simonw/llm/pull/147)
+- `llm.get_model(model_id)` is now documented as raising `llm.UnknownModelError` if the requested model does not exist. [#155](https://github.com/simonw/llm/issues/155)
+
+(v0_7_1)=
+## 0.7.1 (2023-08-19)
+
+- Fixed a bug where some users would see an `AlterError: No such column: log.id` error when attempting to use this tool, after upgrading to the latest [sqlite-utils 3.35 release](https://sqlite-utils.datasette.io/en/stable/changelog.html#v3-35). [#162](https://github.com/simonw/llm/issues/162)
+
+(v0_7)=
+## 0.7 (2023-08-12)
+
+The new {ref}`aliases` commands can be used to configure additional aliases for models, for example:
+
+```bash
+llm aliases set turbo gpt-3.5-turbo-16k
+```
+Now you can run the 16,000 token `gpt-3.5-turbo-16k` model like this:
+
+```bash
+llm -m turbo 'An epic Greek-style saga about a cheesecake that builds a SQL database from scratch'
+```
+Use `llm aliases list` to see a list of aliases and `llm aliases remove turbo` to remove one again. [#151](https://github.com/simonw/llm/issues/151)
+
+### Notable new plugins
+
+- **[llm-mlc](https://github.com/simonw/llm-mlc)** can run local models released by the [MLC project](https://mlc.ai/mlc-llm/), including models that can take advantage of the GPU on Apple Silicon M1/M2 devices.
+- **[llm-llama-cpp](https://github.com/simonw/llm-llama-cpp)** uses [llama.cpp](https://github.com/ggerganov/llama.cpp) to run models published in the GGML format. See [Run Llama 2 on your own Mac using LLM and Homebrew](https://simonwillison.net/2023/Aug/1/llama-2-mac/) for more details.
+
+### Also in this release
+
+- OpenAI models now have min and max validation on their floating point options. Thanks, Pavel Král. [#115](https://github.com/simonw/llm/issues/115)
+- Fix for bug where `llm templates list` raised an error if a template had an empty prompt. Thanks, Sherwin Daganato. [#132](https://github.com/simonw/llm/pull/132)
+- Fixed bug in `llm install --editable` option which prevented installation of `.[test]`. [#136](https://github.com/simonw/llm/issues/136)
+- `llm install --no-cache-dir` and `--force-reinstall` options. [#146](https://github.com/simonw/llm/issues/146)
+
+(v0_6_1)=
+## 0.6.1 (2023-07-24)
+
+- LLM can now be installed directly from Homebrew core: `brew install llm`. [#124](https://github.com/simonw/llm/issues/124)
+- Python API documentation now covers {ref}`python-api-system-prompts`.
+- Fixed incorrect example in the {ref}`prompt-templates` documentation. Thanks, Jorge Cabello. [#125](https://github.com/simonw/llm/pull/125)
+
+(v0_6)=
+## 0.6 (2023-07-18)
+
+- Models hosted on [Replicate](https://replicate.com/) can now be accessed using the [llm-replicate](https://github.com/simonw/llm-replicate) plugin, including the new Llama 2 model from Meta AI. More details here: [Accessing Llama 2 from the command-line with the llm-replicate plugin](https://simonwillison.net/2023/Jul/18/accessing-llama-2/).
+- Model providers that expose an API that is compatible with the OpenAPI API format, including self-hosted model servers such as [LocalAI](https://github.com/go-skynet/LocalAI), can now be accessed using {ref}`additional configuration <openai-compatible-models>` for the default OpenAI plugin. [#106](https://github.com/simonw/llm/issues/106)
+- OpenAI models that are not yet supported by LLM can also {ref}`be configured <openai-extra-models>` using the new `extra-openai-models.yaml` configuration file. [#107](https://github.com/simonw/llm/issues/107)
+- The {ref}`llm logs command <viewing-logs>` now accepts a `-m model_id` option to filter logs to a specific model. Aliases can be used here in addition to model IDs. [#108](https://github.com/simonw/llm/issues/108)
+- Logs now have a SQLite full-text search index against their prompts and responses, and the `llm logs -q SEARCH` option can be used to return logs that match a search term. [#109](https://github.com/simonw/llm/issues/109)
+
+(v0_5)=
+## 0.5 (2023-07-12)
+
+LLM now supports **additional language models**, thanks to a new {ref}`plugins mechanism <installing-plugins>` for installing additional models.
+
+Plugins are available for 19 models in addition to the default OpenAI ones:
+
+- [llm-gpt4all](https://github.com/simonw/llm-gpt4all) adds support for 17 models that can download and run on your own device, including Vicuna, Falcon and wizardLM.
+- [llm-mpt30b](https://github.com/simonw/llm-mpt30b) adds support for the MPT-30B model, a 19GB download.
+- [llm-palm](https://github.com/simonw/llm-palm) adds support for Google's PaLM 2 via the Google API.
+
+A comprehensive tutorial, {ref}`writing a plugin to support a new model <tutorial-model-plugin>` describes how to add new models by building plugins in detail.
+
+### New features
+
+- {ref}`python-api` documentation for using LLM models, including models from plugins, directly from Python. [#75](https://github.com/simonw/llm/issues/75)
+- Messages are now logged to the database by default - no need to run the `llm init-db` command any more, which has been removed. Instead, you can toggle this behavior off using `llm logs off` or turn it on again using `llm logs on`. The `llm logs status` command shows the current status of the log database. If logging is turned off, passing `--log` to the `llm prompt` command will cause that prompt to be logged anyway. [#98](https://github.com/simonw/llm/issues/98)
+- New database schema for logged messages, with `conversations` and `responses` tables. If you have previously used the old `logs` table it will continue to exist but will no longer be written to. [#91](https://github.com/simonw/llm/issues/91)
+- New `-o/--option name value` syntax for setting options for models, such as temperature. Available options differ for different models. [#63](https://github.com/simonw/llm/issues/63)
+- `llm models list --options` command for viewing all available model options. [#82](https://github.com/simonw/llm/issues/82)
+- `llm "prompt" --save template` option for saving a prompt directly to a template. [#55](https://github.com/simonw/llm/issues/55)
+- Prompt templates can now specify {ref}`default values <prompt-default-parameters>` for parameters. Thanks,  Chris Mungall. [#57](https://github.com/simonw/llm/pull/57)
+- `llm openai models` command to list all available OpenAI models from their API. [#70](https://github.com/simonw/llm/issues/70)
+- `llm models default MODEL_ID` to set a different model as the default to be used when `llm` is run without the `-m/--model` option. [#31](https://github.com/simonw/llm/issues/31)
+
+### Smaller improvements
+
+- `llm -s` is now a shortcut for `llm --system`. [#69](https://github.com/simonw/llm/issues/69)
+- `llm -m 4-32k` alias for `gpt-4-32k`.
+- `llm install -e directory` command for installing a plugin from a local directory.
+- The `LLM_USER_PATH` environment variable now controls the location of the directory in which LLM stores its data. This replaces the old `LLM_KEYS_PATH` and `LLM_LOG_PATH` and `LLM_TEMPLATES_PATH` variables. [#76](https://github.com/simonw/llm/issues/76)
+- Documentation covering {ref}`plugin-utilities`.
+- Documentation site now uses Plausible for analytics. [#79](https://github.com/simonw/llm/issues/79)
+
+(v0_4_1)=
+## 0.4.1 (2023-06-17)
+
+- LLM can now be installed using Homebrew: `brew install simonw/llm/llm`. [#50](https://github.com/simonw/llm/issues/50)
+- `llm` is now styled LLM in the documentation. [#45](https://github.com/simonw/llm/issues/45)
+- Examples in documentation now include a copy button. [#43](https://github.com/simonw/llm/issues/43)
+- `llm templates` command no longer has its display disrupted by newlines. [#42](https://github.com/simonw/llm/issues/42)
+- `llm templates` command now includes system prompt, if set. [#44](https://github.com/simonw/llm/issues/44)
+
+(v0_4)=
+## 0.4 (2023-06-17)
+
+This release includes some backwards-incompatible changes:
+
+- The `-4` option for GPT-4 is now `-m 4`.
+- The `--code` option has been removed.
+- The `-s` option has been removed as streaming is now the default. Use `--no-stream` to opt out of streaming.
+
+### Prompt templates
+
+{ref}`prompt-templates` is a new feature that allows prompts to be saved as templates and re-used with different variables.
+
+Templates can be created using the `llm templates edit` command:
+
+```bash
+llm templates edit summarize
+```
+Templates are YAML - the following template defines summarization using a system prompt:
+
+```yaml
+system: Summarize this text
+```
+The template can then be executed like this:
+```bash
+cat myfile.txt | llm -t summarize
+```
+Templates can include both system prompts, regular prompts and indicate the model they should use. They can reference variables such as `$input` for content piped to the tool, or other variables that are passed using the new `-p/--param` option.
+
+This example adds a `voice` parameter:
+
+```yaml
+system: Summarize this text in the voice of $voice
+```
+Then to run it (via [strip-tags](https://github.com/simonw/strip-tags) to remove HTML tags from the input):
+```bash
+curl -s 'https://til.simonwillison.net/macos/imovie-slides-and-audio' | \
+  strip-tags -m | llm -t summarize -p voice GlaDOS
+```
+Example output:
+
+> My previous test subject seemed to have learned something new about iMovie. They exported keynote slides as individual images [...] Quite impressive for a human.
+
+The {ref}`prompt-templates` documentation provides more detailed examples.
+
+### Continue previous chat
+
+You can now use `llm` to continue a previous conversation with the OpenAI chat models (`gpt-3.5-turbo` and `gpt-4`). This will include your previous prompts and responses in the prompt sent to the API, allowing the model to continue within the same context.
+
+Use the new `-c/--continue` option to continue from the previous message thread:
+
+```bash
+llm "Pretend to be a witty gerbil, say hi briefly"
+```
+> Greetings, dear human! I am a clever gerbil, ready to entertain you with my quick wit and endless energy.
+```bash
+llm "What do you think of snacks?" -c
+```
+> Oh, how I adore snacks, dear human! Crunchy carrot sticks, sweet apple slices, and chewy yogurt drops are some of my favorite treats. I could nibble on them all day long!
+
+The `-c` option will continue from the most recent logged message.
+
+To continue a different chat, pass an integer ID to the `--chat` option. This should be the ID of a previously logged message. You can find these IDs using the `llm logs` command.
+
+Thanks [Amjith Ramanujam](https://github.com/amjith) for contributing to this feature. [#6](https://github.com/simonw/llm/issues/6)
+
+### New mechanism for storing API keys
+
+API keys for language models such as those by OpenAI can now be saved using the new `llm keys` family of commands.
+
+To set the default key to be used for the OpenAI APIs, run this:
+
+```bash
+llm keys set openai
+```
+Then paste in your API key.
+
+Keys can also be passed using the new `--key` command line option - this can be a full key or the alias of a key that has been previously stored.
+
+See {ref}`api-keys` for more. [#13](https://github.com/simonw/llm/issues/13)
+
+### New location for the logs.db database
+
+The `logs.db` database that stores a history of executed prompts no longer lives at `~/.llm/log.db` - it can now be found in a location that better fits the host operating system, which can be seen using:
+
+```bash
+llm logs path
+```
+On macOS this is `~/Library/Application Support/io.datasette.llm/logs.db`.
+
+To open that database using Datasette, run this:
+
+```bash
+datasette "$(llm logs path)"
+```
+You can upgrade your existing installation by copying your database to the new location like this:
+```bash
+cp ~/.llm/log.db "$(llm logs path)"
+rm -rf ~/.llm # To tidy up the now obsolete directory
+```
+The database schema has changed, and will be updated automatically the first time you run the command.
+
+That schema is [included in the documentation](https://llm.datasette.io/en/stable/logging.html#sql-schema). [#35](https://github.com/simonw/llm/issues/35)
+
+### Other changes
+
+- New `llm logs --truncate` option (shortcut `-t`) which truncates the displayed prompts to make the log output easier to read. [#16](https://github.com/simonw/llm/issues/16)
+- Documentation now spans multiple pages and lives at <https://llm.datasette.io/> [#21](https://github.com/simonw/llm/issues/21)
+- Default `llm chatgpt` command has been renamed to `llm prompt`. [#17](https://github.com/simonw/llm/issues/17)
+- Removed `--code` option in favour of new prompt templates mechanism. [#24](https://github.com/simonw/llm/issues/24)
+- Responses are now streamed by default, if the model supports streaming. The `-s/--stream` option has been removed. A new `--no-stream` option can be used to opt-out of streaming.  [#25](https://github.com/simonw/llm/issues/25)
+- The `-4/--gpt4` option has been removed in favour of `-m 4` or `-m gpt4`, using a new mechanism that allows models to have additional short names.
+- The new `gpt-3.5-turbo-16k` model with a 16,000 token context length can now also be accessed using `-m chatgpt-16k` or `-m 3.5-16k`. Thanks, Benjamin Kirkbride. [#37](https://github.com/simonw/llm/issues/37)
+- Improved display of error messages from OpenAI. [#15](https://github.com/simonw/llm/issues/15)
+
+(v0_3)=
+## 0.3 (2023-05-17)
+
+- `llm logs` command for browsing logs of previously executed completions. [#3](https://github.com/simonw/llm/issues/3)
+- `llm "Python code to output factorial 10" --code` option which sets a system prompt designed to encourage code to be output without any additional explanatory text. [#5](https://github.com/simonw/llm/issues/5)
+- Tool can now accept a prompt piped directly to standard input. [#11](https://github.com/simonw/llm/issues/11)
+
+(v0_2)=
+## 0.2 (2023-04-01)
+
+- If a SQLite database exists in `~/.llm/log.db` all prompts and responses are logged to that file. The `llm init-db` command can be used to create this file. [#2](https://github.com/simonw/llm/issues/2)
+
+(v0_1)=
+## 0.1 (2023-04-01)
+
+- Initial prototype release. [#1](https://github.com/simonw/llm/issues/1)
+
+</document_content>
+</document>
+<document index="3">
+<source>docs/contributing.md</source>
+<document_content>
+# Contributing
+
+To contribute to this tool, first checkout the code. Then create a new virtual environment:
+```bash
+cd llm
+python -m venv venv
+source venv/bin/activate
+```
+Or if you are using `pipenv`:
+```bash
+pipenv shell
+```
+Now install the dependencies and test dependencies:
+```bash
+pip install -e '.[test]'
+```
+To run the tests:
+```bash
+pytest
+```
+## Debugging tricks
+
+The default OpenAI plugin has a debugging mechanism for showing the exact requests and responses that were sent to the OpenAI API.
+
+Set the `LLM_OPENAI_SHOW_RESPONSES` environment variable like this:
+```bash
+LLM_OPENAI_SHOW_RESPONSES=1 llm -m chatgpt 'three word slogan for an an otter-run bakery'
+```
+This will output details of the API requests and responses to the console.
+
+Use `--no-stream` to see a more readable version of the body that avoids streaming the response:
+
+```bash
+LLM_OPENAI_SHOW_RESPONSES=1 llm -m chatgpt --no-stream \
+  'three word slogan for an an otter-run bakery'
+```
+
+## Documentation
+
+Documentation for this project uses [MyST](https://myst-parser.readthedocs.io/) - it is written in Markdown and rendered using Sphinx.
+
+To build the documentation locally, run the following:
+```bash
+cd docs
+pip install -r requirements.txt
+make livehtml
+```
+This will start a live preview server, using [sphinx-autobuild](https://pypi.org/project/sphinx-autobuild/).
+
+The CLI `--help` examples in the documentation are managed using [Cog](https://github.com/nedbat/cog). Update those files like this:
+```bash
+just cog
+```
+You'll need [Just](https://github.com/casey/just) installed to run this command.
+
+## Release process
+
+To release a new version:
+
+1. Update `docs/changelog.md` with the new changes.
+2. Update the version number in `setup.py`
+3. [Create a GitHub release](https://github.com/simonw/llm/releases/new) for the new version.
+4. Wait for the package to push to PyPI and then...
+5. Run the [regenerate.yaml](https://github.com/simonw/homebrew-llm/actions/workflows/regenerate.yaml) workflow to update the Homebrew tap to the latest version.
+
+</document_content>
+</document>
+<document index="4">
+<source>docs/help.md</source>
+<document_content>
+# CLI reference
+
+This page lists the `--help` output for all of the `llm` commands.
+
+<!-- [[[cog
+from click.testing import CliRunner
+from llm.cli import cli
+def all_help(cli):
+    "Return all help for Click command and its subcommands"
+    # First find all commands and subcommands
+    # List will be [["command"], ["command", "subcommand"], ...]
+    commands = []
+    def find_commands(command, path=None):
+        path = path or []
+        commands.append(path + [command.name])
+        if hasattr(command, 'commands'):
+            for subcommand in command.commands.values():
+                find_commands(subcommand, path + [command.name])
+    find_commands(cli)
+    # Remove first item of each list (it is 'cli')
+    commands = [command[1:] for command in commands]
+    # Now generate help for each one, with appropriate heading level
+    output = []
+    for command in commands:
+        heading_level = len(command) + 2
+        result = CliRunner().invoke(cli, command + ["--help"])
+        hyphenated = "-".join(command)
+        if hyphenated:
+            hyphenated = "-" + hyphenated
+        output.append(f"\n(help{hyphenated})=")
+        output.append("#" * heading_level + " llm " + " ".join(command) + " --help")
+        output.append("```")
+        output.append(result.output.replace("Usage: cli", "Usage: llm").strip())
+        output.append("```")
+    return "\n".join(output)
+cog.out(all_help(cli))
+]]] -->
+
+(help)=
+## llm  --help
+```
+Usage: llm [OPTIONS] COMMAND [ARGS]...
+
+  Access Large Language Models from the command-line
+
+  Documentation: https://llm.datasette.io/
+
+  LLM can run models from many different providers. Consult the plugin directory
+  for a list of available models:
+
+  https://llm.datasette.io/en/stable/plugins/directory.html
+
+  To get started with OpenAI, obtain an API key from them and:
+
+      $ llm keys set openai
+      Enter key: ...
+
+  Then execute a prompt like this:
+
+      llm 'Five outrageous names for a pet pelican'
+
+Options:
+  --version  Show the version and exit.
+  --help     Show this message and exit.
+
+Commands:
+  prompt*       Execute a prompt
+  aliases       Manage model aliases
+  chat          Hold an ongoing chat with a model.
+  collections   View and manage collections of embeddings
+  embed         Embed text and store or return the result
+  embed-models  Manage available embedding models
+  embed-multi   Store embeddings for multiple strings at once
+  install       Install packages from PyPI into the same environment as LLM
+  keys          Manage stored API keys for different models
+  logs          Tools for exploring logged prompts and responses
+  models        Manage available models
+  openai        Commands for working directly with the OpenAI API
+  plugins       List installed plugins
+  similar       Return top N similar IDs from a collection
+  templates     Manage stored prompt templates
+  uninstall     Uninstall Python packages from the LLM environment
+```
+
+(help-prompt)=
+### llm prompt --help
+```
+Usage: llm prompt [OPTIONS] [PROMPT]
+
+  Execute a prompt
+
+  Documentation: https://llm.datasette.io/en/stable/usage.html
+
+  Examples:
+
+      llm 'Capital of France?'
+      llm 'Capital of France?' -m gpt-4o
+      llm 'Capital of France?' -s 'answer in Spanish'
+
+  Multi-modal models can be called with attachments like this:
+
+      llm 'Extract text from this image' -a image.jpg
+      llm 'Describe' -a https://static.simonwillison.net/static/2024/pelicans.jpg
+      cat image | llm 'describe image' -a -
+      # With an explicit mimetype:
+      cat image | llm 'describe image' --at - image/jpeg
+
+Options:
+  -s, --system TEXT               System prompt to use
+  -m, --model TEXT                Model to use
+  -a, --attachment ATTACHMENT     Attachment path or URL or -
+  --at, --attachment-type <TEXT TEXT>...
+                                  Attachment with explicit mimetype
+  -o, --option <TEXT TEXT>...     key/value options for the model
+  -t, --template TEXT             Template to use
+  -p, --param <TEXT TEXT>...      Parameters for template
+  --no-stream                     Do not stream output
+  -n, --no-log                    Don't log to database
+  --log                           Log prompt and response to the database
+  -c, --continue                  Continue the most recent conversation.
+  --cid, --conversation TEXT      Continue the conversation with the given ID.
+  --key TEXT                      API key to use
+  --save TEXT                     Save prompt with this template name
+  --async                         Run prompt asynchronously
+  --help                          Show this message and exit.
+```
+
+(help-chat)=
+### llm chat --help
+```
+Usage: llm chat [OPTIONS]
+
+  Hold an ongoing chat with a model.
+
+Options:
+  -s, --system TEXT            System prompt to use
+  -m, --model TEXT             Model to use
+  -c, --continue               Continue the most recent conversation.
+  --cid, --conversation TEXT   Continue the conversation with the given ID.
+  -t, --template TEXT          Template to use
+  -p, --param <TEXT TEXT>...   Parameters for template
+  -o, --option <TEXT TEXT>...  key/value options for the model
+  --no-stream                  Do not stream output
+  --key TEXT                   API key to use
+  --help                       Show this message and exit.
+```
+
+(help-keys)=
+### llm keys --help
+```
+Usage: llm keys [OPTIONS] COMMAND [ARGS]...
+
+  Manage stored API keys for different models
+
+Options:
+  --help  Show this message and exit.
+
+Commands:
+  list*  List names of all stored keys
+  get    Return the value of a stored key
+  path   Output the path to the keys.json file
+  set    Save a key in the keys.json file
+```
+
+(help-keys-list)=
+#### llm keys list --help
+```
+Usage: llm keys list [OPTIONS]
+
+  List names of all stored keys
+
+Options:
+  --help  Show this message and exit.
+```
+
+(help-keys-path)=
+#### llm keys path --help
+```
+Usage: llm keys path [OPTIONS]
+
+  Output the path to the keys.json file
+
+Options:
+  --help  Show this message and exit.
+```
+
+(help-keys-get)=
+#### llm keys get --help
+```
+Usage: llm keys get [OPTIONS] NAME
+
+  Return the value of a stored key
+
+  Example usage:
+
+      export OPENAI_API_KEY=$(llm keys get openai)
+
+Options:
+  --help  Show this message and exit.
+```
+
+(help-keys-set)=
+#### llm keys set --help
+```
+Usage: llm keys set [OPTIONS] NAME
+
+  Save a key in the keys.json file
+
+  Example usage:
+
+      $ llm keys set openai
+      Enter key: ...
+
+Options:
+  --value TEXT  Value to set
+  --help        Show this message and exit.
+```
+
+(help-logs)=
+### llm logs --help
+```
+Usage: llm logs [OPTIONS] COMMAND [ARGS]...
+
+  Tools for exploring logged prompts and responses
+
+Options:
+  --help  Show this message and exit.
+
+Commands:
+  list*   Show recent logged prompts and their responses
+  off     Turn off logging for all prompts
+  on      Turn on logging for all prompts
+  path    Output the path to the logs.db file
+  status  Show current status of database logging
+```
+
+(help-logs-path)=
+#### llm logs path --help
+```
+Usage: llm logs path [OPTIONS]
+
+  Output the path to the logs.db file
+
+Options:
+  --help  Show this message and exit.
+```
+
+(help-logs-status)=
+#### llm logs status --help
+```
+Usage: llm logs status [OPTIONS]
+
+  Show current status of database logging
+
+Options:
+  --help  Show this message and exit.
+```
+
+(help-logs-on)=
+#### llm logs on --help
+```
+Usage: llm logs on [OPTIONS]
+
+  Turn on logging for all prompts
+
+Options:
+  --help  Show this message and exit.
+```
+
+(help-logs-off)=
+#### llm logs off --help
+```
+Usage: llm logs off [OPTIONS]
+
+  Turn off logging for all prompts
+
+Options:
+  --help  Show this message and exit.
+```
+
+(help-logs-list)=
+#### llm logs list --help
+```
+Usage: llm logs list [OPTIONS]
+
+  Show recent logged prompts and their responses
+
+Options:
+  -n, --count INTEGER         Number of entries to show - defaults to 3, use 0
+                              for all
+  -p, --path FILE             Path to log database
+  -m, --model TEXT            Filter by model or model alias
+  -q, --query TEXT            Search for logs matching this string
+  -t, --truncate              Truncate long strings in output
+  -r, --response              Just output the last response
+  -c, --current               Show logs from the current conversation
+  --cid, --conversation TEXT  Show logs for this conversation ID
+  --json                      Output logs as JSON
+  --help                      Show this message and exit.
+```
+
+(help-models)=
+### llm models --help
+```
+Usage: llm models [OPTIONS] COMMAND [ARGS]...
+
+  Manage available models
+
+Options:
+  --help  Show this message and exit.
+
+Commands:
+  list*    List available models
+  default  Show or set the default model
+```
+
+(help-models-list)=
+#### llm models list --help
+```
+Usage: llm models list [OPTIONS]
+
+  List available models
+
+Options:
+  --options  Show options for each model, if available
+  --async    List async models
+  --help     Show this message and exit.
+```
+
+(help-models-default)=
+#### llm models default --help
+```
+Usage: llm models default [OPTIONS] [MODEL]
+
+  Show or set the default model
+
+Options:
+  --help  Show this message and exit.
+```
+
+(help-templates)=
+### llm templates --help
+```
+Usage: llm templates [OPTIONS] COMMAND [ARGS]...
+
+  Manage stored prompt templates
+
+Options:
+  --help  Show this message and exit.
+
+Commands:
+  list*  List available prompt templates
+  edit   Edit the specified prompt template using the default $EDITOR
+  path   Output the path to the templates directory
+  show   Show the specified prompt template
+```
+
+(help-templates-list)=
+#### llm templates list --help
+```
+Usage: llm templates list [OPTIONS]
+
+  List available prompt templates
+
+Options:
+  --help  Show this message and exit.
+```
+
+(help-templates-show)=
+#### llm templates show --help
+```
+Usage: llm templates show [OPTIONS] NAME
+
+  Show the specified prompt template
+
+Options:
+  --help  Show this message and exit.
+```
+
+(help-templates-edit)=
+#### llm templates edit --help
+```
+Usage: llm templates edit [OPTIONS] NAME
+
+  Edit the specified prompt template using the default $EDITOR
+
+Options:
+  --help  Show this message and exit.
+```
+
+(help-templates-path)=
+#### llm templates path --help
+```
+Usage: llm templates path [OPTIONS]
+
+  Output the path to the templates directory
+
+Options:
+  --help  Show this message and exit.
+```
+
+(help-aliases)=
+### llm aliases --help
+```
+Usage: llm aliases [OPTIONS] COMMAND [ARGS]...
+
+  Manage model aliases
+
+Options:
+  --help  Show this message and exit.
+
+Commands:
+  list*   List current aliases
+  path    Output the path to the aliases.json file
+  remove  Remove an alias
+  set     Set an alias for a model
+```
+
+(help-aliases-list)=
+#### llm aliases list --help
+```
+Usage: llm aliases list [OPTIONS]
+
+  List current aliases
+
+Options:
+  --json  Output as JSON
+  --help  Show this message and exit.
+```
+
+(help-aliases-set)=
+#### llm aliases set --help
+```
+Usage: llm aliases set [OPTIONS] ALIAS MODEL_ID
+
+  Set an alias for a model
+
+  Example usage:
+
+      $ llm aliases set turbo gpt-3.5-turbo
+
+Options:
+  --help  Show this message and exit.
+```
+
+(help-aliases-remove)=
+#### llm aliases remove --help
+```
+Usage: llm aliases remove [OPTIONS] ALIAS
+
+  Remove an alias
+
+  Example usage:
+
+      $ llm aliases remove turbo
+
+Options:
+  --help  Show this message and exit.
+```
+
+(help-aliases-path)=
+#### llm aliases path --help
+```
+Usage: llm aliases path [OPTIONS]
+
+  Output the path to the aliases.json file
+
+Options:
+  --help  Show this message and exit.
+```
+
+(help-plugins)=
+### llm plugins --help
+```
+Usage: llm plugins [OPTIONS]
+
+  List installed plugins
+
+Options:
+  --all   Include built-in default plugins
+  --help  Show this message and exit.
+```
+
+(help-install)=
+### llm install --help
+```
+Usage: llm install [OPTIONS] [PACKAGES]...
+
+  Install packages from PyPI into the same environment as LLM
+
+Options:
+  -U, --upgrade        Upgrade packages to latest version
+  -e, --editable TEXT  Install a project in editable mode from this path
+  --force-reinstall    Reinstall all packages even if they are already up-to-
+                       date
+  --no-cache-dir       Disable the cache
+  --help               Show this message and exit.
+```
+
+(help-uninstall)=
+### llm uninstall --help
+```
+Usage: llm uninstall [OPTIONS] PACKAGES...
+
+  Uninstall Python packages from the LLM environment
+
+Options:
+  -y, --yes  Don't ask for confirmation
+  --help     Show this message and exit.
+```
+
+(help-embed)=
+### llm embed --help
+```
+Usage: llm embed [OPTIONS] [COLLECTION] [ID]
+
+  Embed text and store or return the result
+
+Options:
+  -i, --input PATH                File to embed
+  -m, --model TEXT                Embedding model to use
+  --store                         Store the text itself in the database
+  -d, --database FILE
+  -c, --content TEXT              Content to embed
+  --binary                        Treat input as binary data
+  --metadata TEXT                 JSON object metadata to store
+  -f, --format [json|blob|base64|hex]
+                                  Output format
+  --help                          Show this message and exit.
+```
+
+(help-embed-multi)=
+### llm embed-multi --help
+```
+Usage: llm embed-multi [OPTIONS] COLLECTION [INPUT_PATH]
+
+  Store embeddings for multiple strings at once
+
+  Input can be CSV, TSV or a JSON list of objects.
+
+  The first column is treated as an ID - all other columns are assumed to be
+  text that should be concatenated together in order to calculate the
+  embeddings.
+
+  Input data can come from one of three sources:
+
+  1. A CSV, JSON, TSV or JSON-nl file (including on standard input)
+  2. A SQL query against a SQLite database
+  3. A directory of files
+
+Options:
+  --format [json|csv|tsv|nl]   Format of input file - defaults to auto-detect
+  --files <DIRECTORY TEXT>...  Embed files in this directory - specify directory
+                               and glob pattern
+  --encoding TEXT              Encoding to use when reading --files
+  --binary                     Treat --files as binary data
+  --sql TEXT                   Read input using this SQL query
+  --attach <TEXT FILE>...      Additional databases to attach - specify alias
+                               and file path
+  --batch-size INTEGER         Batch size to use when running embeddings
+  --prefix TEXT                Prefix to add to the IDs
+  -m, --model TEXT             Embedding model to use
+  --store                      Store the text itself in the database
+  -d, --database FILE
+  --help                       Show this message and exit.
+```
+
+(help-similar)=
+### llm similar --help
+```
+Usage: llm similar [OPTIONS] COLLECTION [ID]
+
+  Return top N similar IDs from a collection
+
+  Example usage:
+
+      llm similar my-collection -c "I like cats"
+
+  Or to find content similar to a specific stored ID:
+
+      llm similar my-collection 1234
+
+Options:
+  -i, --input PATH      File to embed for comparison
+  -c, --content TEXT    Content to embed for comparison
+  --binary              Treat input as binary data
+  -n, --number INTEGER  Number of results to return
+  -d, --database FILE
+  --help                Show this message and exit.
+```
+
+(help-embed-models)=
+### llm embed-models --help
+```
+Usage: llm embed-models [OPTIONS] COMMAND [ARGS]...
+
+  Manage available embedding models
+
+Options:
+  --help  Show this message and exit.
+
+Commands:
+  list*    List available embedding models
+  default  Show or set the default embedding model
+```
+
+(help-embed-models-list)=
+#### llm embed-models list --help
+```
+Usage: llm embed-models list [OPTIONS]
+
+  List available embedding models
+
+Options:
+  --help  Show this message and exit.
+```
+
+(help-embed-models-default)=
+#### llm embed-models default --help
+```
+Usage: llm embed-models default [OPTIONS] [MODEL]
+
+  Show or set the default embedding model
+
+Options:
+  --remove-default  Reset to specifying no default model
+  --help            Show this message and exit.
+```
+
+(help-collections)=
+### llm collections --help
+```
+Usage: llm collections [OPTIONS] COMMAND [ARGS]...
+
+  View and manage collections of embeddings
+
+Options:
+  --help  Show this message and exit.
+
+Commands:
+  list*   View a list of collections
+  delete  Delete the specified collection
+  path    Output the path to the embeddings database
+```
+
+(help-collections-path)=
+#### llm collections path --help
+```
+Usage: llm collections path [OPTIONS]
+
+  Output the path to the embeddings database
+
+Options:
+  --help  Show this message and exit.
+```
+
+(help-collections-list)=
+#### llm collections list --help
+```
+Usage: llm collections list [OPTIONS]
+
+  View a list of collections
+
+Options:
+  -d, --database FILE  Path to embeddings database
+  --json               Output as JSON
+  --help               Show this message and exit.
+```
+
+(help-collections-delete)=
+#### llm collections delete --help
+```
+Usage: llm collections delete [OPTIONS] COLLECTION
+
+  Delete the specified collection
+
+  Example usage:
+
+      llm collections delete my-collection
+
+Options:
+  -d, --database FILE  Path to embeddings database
+  --help               Show this message and exit.
+```
+
+(help-openai)=
+### llm openai --help
+```
+Usage: llm openai [OPTIONS] COMMAND [ARGS]...
+
+  Commands for working directly with the OpenAI API
+
+Options:
+  --help  Show this message and exit.
+
+Commands:
+  models  List models available to you from the OpenAI API
+```
+
+(help-openai-models)=
+#### llm openai models --help
+```
+Usage: llm openai models [OPTIONS]
+
+  List models available to you from the OpenAI API
+
+Options:
+  --json      Output as JSON
+  --key TEXT  OpenAI API key
+  --help      Show this message and exit.
+```
+<!-- [[[end]]] -->
+</document_content>
+</document>
+<document index="5">
+<source>docs/index.md</source>
+<document_content>
+# LLM
+
+[![GitHub repo](https://img.shields.io/badge/github-repo-green)](https://github.com/simonw/llm)
+[![PyPI](https://img.shields.io/pypi/v/llm.svg)](https://pypi.org/project/llm/)
+[![Changelog](https://img.shields.io/github/v/release/simonw/llm?include_prereleases&label=changelog)](https://llm.datasette.io/en/stable/changelog.html)
+[![Tests](https://github.com/simonw/llm/workflows/Test/badge.svg)](https://github.com/simonw/llm/actions?query=workflow%3ATest)
+[![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](https://github.com/simonw/llm/blob/main/LICENSE)
+[![Discord](https://img.shields.io/discord/823971286308356157?label=discord)](https://datasette.io/discord-llm)
+[![Homebrew](https://img.shields.io/homebrew/installs/dy/llm?color=yellow&label=homebrew&logo=homebrew)](https://formulae.brew.sh/formula/llm)
+
+A CLI utility and Python library for interacting with Large Language Models, both via remote APIs and models that can be installed and run on your own machine.
+
+{ref}`Run prompts from the command-line <usage-executing-prompts>`, {ref}`store the results in SQLite <logging>`, {ref}`generate embeddings <embeddings>` and more.
+
+Here's a [YouTube video demo](https://www.youtube.com/watch?v=QUXQNi6jQ30) and [accompanying detailed notes](https://simonwillison.net/2024/Jun/17/cli-language-models/).
+
+Background on this project:
+- [llm, ttok and strip-tags—CLI tools for working with ChatGPT and other LLMs](https://simonwillison.net/2023/May/18/cli-tools-for-llms/)
+- [The LLM CLI tool now supports self-hosted language models via plugins](https://simonwillison.net/2023/Jul/12/llm/)
+- [Accessing Llama 2 from the command-line with the llm-replicate plugin](https://simonwillison.net/2023/Jul/18/accessing-llama-2/)
+- [Run Llama 2 on your own Mac using LLM and Homebrew](https://simonwillison.net/2023/Aug/1/llama-2-mac/)
+- [Catching up on the weird world of LLMs](https://simonwillison.net/2023/Aug/3/weird-world-of-llms/)
+- [LLM now provides tools for working with embeddings](https://simonwillison.net/2023/Sep/4/llm-embeddings/)
+- [Build an image search engine with llm-clip, chat with models with llm chat](https://simonwillison.net/2023/Sep/12/llm-clip-and-chat/)
+- [Many options for running Mistral models in your terminal using LLM](https://simonwillison.net/2023/Dec/18/mistral/)
+
+For more check out [the llm tag](https://simonwillison.net/tags/llm/) on my blog.
+
+## Quick start
+
+First, install LLM using `pip` or Homebrew or `pipx`:
+
+```bash
+pip install llm
+```
+Or with Homebrew (see {ref}`warning note <homebrew-warning>`):
+```bash
+brew install llm
+```
+Or with [pipx](https://pypa.github.io/pipx/):
+```bash
+pipx install llm
+```
+If you have an [OpenAI API key](https://platform.openai.com/api-keys) key you can run this:
+```bash
+# Paste your OpenAI API key into this
+llm keys set openai
+
+# Run a prompt (with the default gpt-4o-mini model)
+llm "Ten fun names for a pet pelican"
+
+# Extract text from an image
+llm "extract text" -a scanned-document.jpg
+
+# Use a system prompt against a file
+cat myfile.py | llm -s "Explain this code"
+```
+Or you can {ref}`install a plugin <installing-plugins>` and use models that can run on your local device:
+```bash
+# Install the plugin
+llm install llm-gpt4all
+
+# Download and run a prompt against the Orca Mini 7B model
+llm -m orca-mini-3b-gguf2-q4_0 'What is the capital of France?'
+```
+To start {ref}`an interactive chat <usage-chat>` with a model, use `llm chat`:
+```bash
+llm chat -m gpt-4o
+```
+```
+Chatting with gpt-4o
+Type 'exit' or 'quit' to exit
+Type '!multi' to enter multiple lines, then '!end' to finish
+> Tell me a joke about a pelican
+Why don't pelicans like to tip waiters?
+
+Because they always have a big bill!
+>
+```
+
+## Contents
+
+```{toctree}
+---
+maxdepth: 3
+---
+setup
+usage
+openai-models
+other-models
+embeddings/index
+plugins/index
+aliases
+python-api
+templates
+logging
+related-tools
+help
+contributing
+changelog
+```
+
+</document_content>
+</document>
+<document index="6">
+<source>docs/logging.md</source>
+<document_content>
+(logging)=
+# Logging to SQLite
+
+`llm` defaults to logging all prompts and responses to a SQLite database.
+
+You can find the location of that database using the `llm logs path` command:
+
+```bash
+llm logs path
+```
+On my Mac that outputs:
+```
+/Users/simon/Library/Application Support/io.datasette.llm/logs.db
+```
+This will differ for other operating systems.
+
+To avoid logging an individual prompt, pass `--no-log` or `-n` to the command:
+```bash
+llm 'Ten names for cheesecakes' -n
+```
+
+To turn logging by default off:
+
+```bash
+llm logs off
+```
+If you've turned off logging you can still log an individual prompt and response by adding `--log`:
+```bash
+llm 'Five ambitious names for a pet pterodactyl' --log
+```
+To turn logging by default back on again:
+
+```bash
+llm logs on
+```
+To see the status of the logs database, run this:
+```bash
+llm logs status
+```
+Example output:
+```
+Logging is ON for all prompts
+Found log database at /Users/simon/Library/Application Support/io.datasette.llm/logs.db
+Number of conversations logged: 33
+Number of responses logged:     48
+Database file size:             19.96MB
+```
+
+(viewing-logs)=
+
+## Viewing the logs
+
+You can view the logs using the `llm logs` command:
+```bash
+llm logs
+```
+This will output the three most recent logged items in Markdown format, showing both the prompt and the response formatted using Markdown.
+
+To get back just the most recent prompt response as plain text, add `-r/--response`:
+
+```bash
+llm logs -r
+```
+
+Add `--json` to get the log messages in JSON instead:
+
+```bash
+llm logs --json
+```
+
+Add `-n 10` to see the ten most recent items:
+```bash
+llm logs -n 10
+```
+Or `-n 0` to see everything that has ever been logged:
+```bash
+llm logs -n 0
+```
+You can truncate the display of the prompts and responses using the `-t/--truncate` option. This can help make the JSON output more readable:
+```bash
+llm logs -n 5 -t --json
+```
+
+(logs-conversation)=
+### Logs for a conversation
+
+To view the logs for the most recent {ref}`conversation <conversation>` you have had with a model, use `-c`:
+
+```bash
+llm logs -c
+```
+To see logs for a specific conversation based on its ID, use `--cid ID` or `--conversation ID`:
+
+```bash
+llm logs --cid 01h82n0q9crqtnzmf13gkyxawg
+```
+
+### Searching the logs
+
+You can search the logs for a search term in the `prompt` or the `response` columns.
+```bash
+llm logs -q 'cheesecake'
+```
+The most relevant terms will be shown at the bottom of the output.
+
+### Filtering by model
+
+You can filter to logs just for a specific model (or model alias) using `-m/--model`:
+```bash
+llm logs -m chatgpt
+```
+
+### Browsing logs using Datasette
+
+You can also use [Datasette](https://datasette.io/) to browse your logs like this:
+
+```bash
+datasette "$(llm logs path)"
+```
+## SQL schema
+
+Here's the SQL schema used by the `logs.db` database:
+
+<!-- [[[cog
+import cog
+from llm.migrations import migrate
+import sqlite_utils
+import re
+db = sqlite_utils.Database(memory=True)
+migrate(db)
+
+def cleanup_sql(sql):
+    first_line = sql.split('(')[0]
+    inner = re.search(r'\((.*)\)', sql, re.DOTALL).group(1)
+    columns = [l.strip() for l in inner.split(',')]
+    return first_line + '(\n  ' + ',\n  '.join(columns) + '\n);'
+
+cog.out("```sql\n")
+for table in ("conversations", "responses", "responses_fts", "attachments", "prompt_attachments"):
+    schema = db[table].schema
+    cog.out(format(cleanup_sql(schema)))
+    cog.out("\n")
+cog.out("```\n")
+]]] -->
+```sql
+CREATE TABLE [conversations] (
+  [id] TEXT PRIMARY KEY,
+  [name] TEXT,
+  [model] TEXT
+);
+CREATE TABLE [responses] (
+  [id] TEXT PRIMARY KEY,
+  [model] TEXT,
+  [prompt] TEXT,
+  [system] TEXT,
+  [prompt_json] TEXT,
+  [options_json] TEXT,
+  [response] TEXT,
+  [response_json] TEXT,
+  [conversation_id] TEXT REFERENCES [conversations]([id]),
+  [duration_ms] INTEGER,
+  [datetime_utc] TEXT
+);
+CREATE VIRTUAL TABLE [responses_fts] USING FTS5 (
+  [prompt],
+  [response],
+  content=[responses]
+);
+CREATE TABLE [attachments] (
+  [id] TEXT PRIMARY KEY,
+  [type] TEXT,
+  [path] TEXT,
+  [url] TEXT,
+  [content] BLOB
+);
+CREATE TABLE [prompt_attachments] (
+  [response_id] TEXT REFERENCES [responses]([id]),
+  [attachment_id] TEXT REFERENCES [attachments]([id]),
+  [order] INTEGER,
+  PRIMARY KEY ([response_id],
+  [attachment_id])
+);
+```
+<!-- [[[end]]] -->
+`responses_fts` configures [SQLite full-text search](https://www.sqlite.org/fts5.html) against the `prompt` and `response` columns in the `responses` table.
+
+</document_content>
+</document>
+<document index="7">
+<source>docs/openai-models.md</source>
+<document_content>
+(openai-models)=
+
+# OpenAI models
+
+LLM ships with a default plugin for talking to OpenAI's API. OpenAI offer both language models and embedding models, and LLM can access both types.
+
+(openai-models-configuration)=
+
+## Configuration
+
+All OpenAI models are accessed using an API key. You can obtain one from [the API keys page](https://platform.openai.com/api-keys) on their site.
+
+Once you have created a key, configure LLM to use it by running:
+
+```bash
+llm keys set openai
+```
+Then paste in the API key.
+
+(openai-models-language)=
+
+## OpenAI language models
+
+Run `llm models` for a full list of available models. The OpenAI models supported by LLM are:
+
+<!-- [[[cog
+from click.testing import CliRunner
+from llm.cli import cli
+result = CliRunner().invoke(cli, ["models", "list"])
+models = [line for line in result.output.split("\n") if line.startswith("OpenAI ")]
+cog.out("```\n{}\n```".format("\n".join(models)))
+]]] -->
+```
+OpenAI Chat: gpt-4o (aliases: 4o)
+OpenAI Chat: gpt-4o-mini (aliases: 4o-mini)
+OpenAI Chat: gpt-4o-audio-preview
+OpenAI Chat: gpt-3.5-turbo (aliases: 3.5, chatgpt)
+OpenAI Chat: gpt-3.5-turbo-16k (aliases: chatgpt-16k, 3.5-16k)
+OpenAI Chat: gpt-4 (aliases: 4, gpt4)
+OpenAI Chat: gpt-4-32k (aliases: 4-32k)
+OpenAI Chat: gpt-4-1106-preview
+OpenAI Chat: gpt-4-0125-preview
+OpenAI Chat: gpt-4-turbo-2024-04-09
+OpenAI Chat: gpt-4-turbo (aliases: gpt-4-turbo-preview, 4-turbo, 4t)
+OpenAI Chat: o1-preview
+OpenAI Chat: o1-mini
+OpenAI Completion: gpt-3.5-turbo-instruct (aliases: 3.5-instruct, chatgpt-instruct)
+```
+<!-- [[[end]]] -->
+
+See [the OpenAI models documentation](https://platform.openai.com/docs/models) for details of each of these.
+
+`gpt-4o-mini` (aliased to `4o-mini`) is the least expensive model, and is the default for if you don't specify a model at all. `gpt-4o` (aliased to `4o`) is the newest, cheapest and fastest of the GPT-4 family of models.
+
+The `gpt-3.5-turbo-instruct` model is a little different - it is a completion model rather than a chat model, described in [the OpenAI completions documentation](https://platform.openai.com/docs/api-reference/completions/create).
+
+Completion models can be called with the `-o logprobs 3` option (not supported by chat models) which will cause LLM to store 3 log probabilities for each returned token in the SQLite database. Consult [this issue](https://github.com/simonw/llm/issues/284#issuecomment-1724772704) for details on how to read these values.
+
+(openai-models-embedding)=
+
+## OpenAI embedding models
+
+Run `llm embed-models` for a list of {ref}`embedding models <embeddings>`. The following OpenAI embedding models are supported by LLM:
+
+```
+ada-002 (aliases: ada, oai)
+3-small
+3-large
+3-small-512
+3-large-256
+3-large-1024
+```
+
+The `3-small` model is currently the most inexpensive. `3-large` costs more but is more capable - see [New embedding models and API updates](https://openai.com/blog/new-embedding-models-and-api-updates) on the OpenAI blog for details and benchmarks.
+
+An important characteristic of any embedding model is the size of the vector it returns. Smaller vectors cost less to store and query, but may be less accurate.
+
+OpenAI `3-small` and `3-large` vectors can be safely truncated to lower dimensions without losing too much accuracy. The `-int` models provided by LLM are pre-configured to do this, so `3-large-256` is the `3-large` model truncated to 256 dimensions.
+
+The vector size of the supported OpenAI embedding models are as follows:
+
+| Model | Size |
+| --- | --- |
+| ada-002 | 1536 |
+| 3-small | 1536 |
+| 3-large | 3072 |
+| 3-small-512 | 512 |
+| 3-large-256 | 256 |
+| 3-large-1024 | 1024 |
+
+(openai-extra-models)=
+
+## Adding more OpenAI models
+
+OpenAI occasionally release new models with new names. LLM aims to ship new releases to support these, but you can also configure them directly, by adding them to a `extra-openai-models.yaml` configuration file.
+
+Run this command to find the directory in which this file should be created:
+
+```bash
+dirname "$(llm logs path)"
+```
+On my Mac laptop I get this:
+```
+~/Library/Application Support/io.datasette.llm
+```
+Create a file in that directory called `extra-openai-models.yaml`.
+
+Let's say OpenAI have just released the `gpt-3.5-turbo-0613` model and you want to use it, despite LLM not yet shipping support. You could configure that by adding this to the file:
+
+```yaml
+- model_id: gpt-3.5-turbo-0613
+  aliases: ["0613"]
+```
+The `model_id` is the identifier that will be recorded in the LLM logs. You can use this to specify the model, or you can optionally include a list of aliases for that model.
+
+If the model is a completion model (such as `gpt-3.5-turbo-instruct`) add `completion: true` to the configuration.
+
+With this configuration in place, the following command should run a prompt against the new model:
+
+```bash
+llm -m 0613 'What is the capital of France?'
+```
+Run `llm models` to confirm that the new model is now available:
+```bash
+llm models
+```
+Example output:
+```
+OpenAI Chat: gpt-3.5-turbo (aliases: 3.5, chatgpt)
+OpenAI Chat: gpt-3.5-turbo-16k (aliases: chatgpt-16k, 3.5-16k)
+OpenAI Chat: gpt-4 (aliases: 4, gpt4)
+OpenAI Chat: gpt-4-32k (aliases: 4-32k)
+OpenAI Chat: gpt-3.5-turbo-0613 (aliases: 0613)
+```
+Running `llm logs -n 1` should confirm that the prompt and response has been correctly logged to the database.
+
+</document_content>
+</document>
+<document index="8">
+<source>docs/other-models.md</source>
+<document_content>
+(other-models)=
+# Other models
+
+LLM supports OpenAI models by default. You can install {ref}`plugins <plugins>` to add support for other models. You can also add additional OpenAI-API-compatible models {ref}`using a configuration file <openai-extra-models>`.
+
+## Installing and using a local model
+
+{ref}`LLM plugins <plugins>` can provide local models that run on your machine.
+
+To install **[llm-gpt4all](https://github.com/simonw/llm-gpt4all)**, providing 17 models from the [GPT4All](https://gpt4all.io/) project, run this:
+
+```bash
+llm install llm-gpt4all
+```
+Run `llm models` to see the expanded list of available models.
+
+To run a prompt through one of the models from GPT4All specify it using `-m/--model`:
+```bash
+llm -m orca-mini-3b-gguf2-q4_0 'What is the capital of France?'
+```
+The model will be downloaded and cached the first time you use it.
+
+Check the {ref}`plugin directory <plugin-directory>` for the latest list of available plugins for other models.
+
+(openai-compatible-models)=
+
+## OpenAI-compatible models
+
+Projects such as [LocalAI](https://localai.io/) offer a REST API that imitates the OpenAI API but can be used to run other models, including models that can be installed on your own machine. These can be added using the same configuration mechanism.
+
+The `model_id` is the name LLM will use for the model. The `model_name` is the name which needs to be passed to the API - this might differ from the `model_id`, especially if the `model_id` could potentially clash with other installed models.
+
+The `api_base` key can be used to point the OpenAI client library at a different API endpoint.
+
+To add the `orca-mini-3b` model hosted by a local installation of [LocalAI](https://localai.io/), add this to your `extra-openai-models.yaml` file:
+
+```yaml
+- model_id: orca-openai-compat
+  model_name: orca-mini-3b.ggmlv3
+  api_base: "http://localhost:8080"
+```
+If the `api_base` is set, the existing configured `openai` API key will not be sent by default.
+
+You can set `api_key_name` to the name of a key stored using the {ref}`api-keys` feature.
+
+Add `completion: true` if the model is a completion model that uses a `/completion` as opposed to a `/completion/chat` endpoint.
+
+If a model does not support streaming, add `can_stream: false` to disable the streaming option.
+
+Having configured the model like this, run `llm models` to check that it installed correctly. You can then run prompts against it like so:
+
+```bash
+llm -m orca-openai-compat 'What is the capital of France?'
+```
+And confirm they were logged correctly with:
+```bash
+llm logs -n 1
+```
+
+### Extra HTTP headers
+
+Some providers such as [openrouter.ai](https://openrouter.ai/docs) may require the setting of additional HTTP headers. You can set those using the `headers:` key like this:
+
+```yaml
+- model_id: claude
+  model_name: anthropic/claude-2
+  api_base: "https://openrouter.ai/api/v1"
+  api_key_name: openrouter
+  headers:
+    HTTP-Referer: "https://llm.datasette.io/"
+    X-Title: LLM
+```
+</document_content>
+</document>
+<document index="9">
+<source>docs/python-api.md</source>
+<document_content>
+(python-api)=
+# Python API
+
+LLM provides a Python API for executing prompts, in addition to the command-line interface.
+
+Understanding this API is also important for writing {ref}`plugins`.
+
+## Basic prompt execution
+
+To run a prompt against the `gpt-4o-mini` model, run this:
+
+```python
+import llm
+
+model = llm.get_model("gpt-4o-mini")
+# Optional, you can configure the key in other ways:
+model.key = "sk-..."
+response = model.prompt("Five surprising names for a pet pelican")
+print(response.text())
+```
+The `llm.get_model()` function accepts model names or aliases. You can also omit it to use the currently configured default model, which is `gpt-4o-mini` if you have not changed the default.
+
+In this example the key is set by Python code. You can also provide the key using the `OPENAI_API_KEY` environment variable, or use the `llm keys set openai` command to store it in a `keys.json` file, see {ref}`api-keys`.
+
+The `__str__()` method of `response` also returns the text of the response, so you can do this instead:
+
+```python
+print(llm.get_model().prompt("Five surprising names for a pet pelican"))
+```
+
+You can run this command to see a list of available models and their aliases:
+
+```bash
+llm models
+```
+If you have set a `OPENAI_API_KEY` environment variable you can omit the `model.key = ` line.
+
+Calling `llm.get_model()` with an invalid model name will raise a `llm.UnknownModelError` exception.
+
+(python-api-system-prompts)=
+
+### System prompts
+
+For models that accept a system prompt, pass it as `system="..."`:
+
+```python
+response = model.prompt(
+    "Five surprising names for a pet pelican",
+    system="Answer like GlaDOS"
+)
+```
+
+(python-api-attachments)=
+
+### Attachments
+
+Model that accept multi-modal input (images, audio, video etc) can be passed attachments using the `attachments=` keyword argument. This accepts a list of `llm.Attachment()` instances.
+
+This example shows two attachments - one from a file path and one from a URL:
+```python
+import llm
+
+model = llm.get_model("gpt-4o-mini")
+response = model.prompt(
+    "Describe these images",
+    attachments=[
+        llm.Attachment(path="pelican.jpg"),
+        llm.Attachment(url="https://static.simonwillison.net/static/2024/pelicans.jpg"),
+    ]
+)
+```
+Use `llm.Attachment(content=b"binary image content here")` to pass binary content directly.
+
+### Model options
+
+For models that support options (view those with `llm models --options`) you can pass options as keyword arguments to the `.prompt()` method:
+
+```python
+model = llm.get_model()
+print(model.prompt("Names for otters", temperature=0.2))
+```
+
+### Models from plugins
+
+Any models you have installed as plugins will also be available through this mechanism, for example to use Anthropic's Claude 3.5 Sonnet model with [llm-claude-3](https://github.com/simonw/llm-claude-3):
+
+```bash
+pip install llm-claude-3
+```
+Then in your Python code:
+```python
+import llm
+
+model = llm.get_model("claude-3.5-sonnet")
+# Use this if you have not set the key using 'llm keys set claude':
+model.key = 'YOUR_API_KEY_HERE'
+response = model.prompt("Five surprising names for a pet pelican")
+print(response.text())
+```
+Some models do not use API keys at all.
+
+### Streaming responses
+
+For models that support it you can stream responses as they are generated, like this:
+
+```python
+response = model.prompt("Five diabolical names for a pet goat")
+for chunk in response:
+    print(chunk, end="")
+```
+The `response.text()` method described earlier does this for you - it runs through the iterator and gathers the results into a string.
+
+If a response has been evaluated, `response.text()` will continue to return the same string.
+
+(python-api-async)=
+
+## Async models
+
+Some plugins provide async versions of their supported models, suitable for use with Python [asyncio](https://docs.python.org/3/library/asyncio.html).
+
+To use an async model, use the `llm.get_async_model()` function instead of `llm.get_model()`:
+
+```python
+import llm
+model = llm.get_async_model("gpt-4o")
+```
+You can then run a prompt using `await model.prompt(...)`:
+
+```python
+response = await model.prompt(
+    "Five surprising names for a pet pelican"
+)
+print(await response.text())
+```
+Or use `async for chunk in ...` to stream the response as it is generated:
+```python
+async for chunk in model.prompt(
+    "Five surprising names for a pet pelican"
+):
+    print(chunk, end="", flush=True)
+```
+
+## Conversations
+
+LLM supports *conversations*, where you ask follow-up questions of a model as part of an ongoing conversation.
+
+To start a new conversation, use the `model.conversation()` method:
+
+```python
+model = llm.get_model()
+conversation = model.conversation()
+```
+You can then use the `conversation.prompt()` method to execute prompts against this conversation:
+
+```python
+response = conversation.prompt("Five fun facts about pelicans")
+print(response.text())
+```
+This works exactly the same as the `model.prompt()` method, except that the conversation will be maintained across multiple prompts. So if you run this next:
+```python
+response2 = conversation.prompt("Now do skunks")
+print(response2.text())
+```
+You will get back five fun facts about skunks.
+
+The `conversation.prompt()` method supports attachments as well:
+```python
+response = conversation.prompt(
+    "Describe these birds",
+    attachments=[
+        llm.Attachment(url="https://static.simonwillison.net/static/2024/pelicans.jpg")
+    ]
+)
+```
+
+Access `conversation.responses` for a list of all of the responses that have so far been returned during the conversation.
+
+## Other functions
+
+The `llm` top level package includes some useful utility functions.
+
+### set_alias(alias, model_id)
+
+The `llm.set_alias()` function can be used to define a new alias:
+
+```python
+import llm
+
+llm.set_alias("mini", "gpt-4o-mini")
+```
+The second argument can be a model identifier or another alias, in which case that alias will be resolved.
+
+If the `aliases.json` file does not exist or contains invalid JSON it will be created or overwritten.
+
+### remove_alias(alias)
+
+Removes the alias with the given name from the `aliases.json` file.
+
+Raises `KeyError` if the alias does not exist.
+
+```python
+import llm
+
+llm.remove_alias("turbo")
+```
+
+### set_default_model(alias)
+
+This sets the default model to the given model ID or alias. Any changes to defaults will be persisted in the LLM configuration folder, and will affect all programs using LLM on the system, including the `llm` CLI tool.
+
+```python
+import llm
+
+llm.set_default_model("claude-3.5-sonnet")
+```
+
+### get_default_model()
+
+This returns the currently configured default model, or `gpt-4o-mini` if no default has been set.
+
+```python
+import llm
+
+model_id = llm.get_default_model()
+```
+
+To detect if no default has been set you can use this pattern:
+
+```python
+if llm.get_default_model(default=None) is None:
+    print("No default has been set")
+```
+Here the `default=` parameter specifies the value that should be returned if there is no configured default.
+
+### set_default_embedding_model(alias) and get_default_embedding_model()
+
+These two methods work the same as `set_default_model()` and `get_default_model()` but for the default {ref}`embedding model <embeddings>` instead.
+</document_content>
+</document>
+<document index="10">
+<source>docs/related-tools.md</source>
+<document_content>
+(related-tools)=
+# Related tools
+
+The following tools are designed to be used with LLM:
+
+(related-tools-strip-tags)=
+## strip-tags
+
+[strip-tags](https://github.com/simonw/strip-tags) is a command for stripping tags from HTML. This is useful when working with LLMs because HTML tags can use up a lot of your token budget.
+
+Here's how to summarize the front page of the New York Times, by both stripping tags and filtering to just the elements with `class="story-wrapper"`:
+
+```bash
+curl -s https://www.nytimes.com/ \
+  | strip-tags .story-wrapper \
+  | llm -s 'summarize the news'
+```
+
+[llm, ttok and strip-tags—CLI tools for working with ChatGPT and other LLMs](https://simonwillison.net/2023/May/18/cli-tools-for-llms/) describes ways to use `strip-tags` in more detail.
+
+(related-tools-ttok)=
+## ttok
+
+[ttok](https://github.com/simonw/ttok) is a command-line tool for counting OpenAI tokens. You can use it to check if input is likely to fit in the token limit for GPT 3.5 or GPT4:
+
+```bash
+cat my-file.txt | ttok
+```
+```
+125
+```
+It can also truncate input down to a desired number of tokens:
+```bash
+ttok This is too many tokens -t 3
+```
+```
+This is too
+```
+This is useful for truncating a large document down to a size where it can be processed by an LLM.
+
+(related-tools-symbex)=
+## Symbex
+
+[Symbex](https://github.com/simonw/symbex) is a tool for searching for symbols in Python codebases. It's useful for extracting just the code for a specific problem and then piping that into LLM for explanation, refactoring or other tasks.
+
+Here's how to use it to find all functions that match `test*csv*` and use those to guess what the software under test does:
+
+```bash
+symbex 'test*csv*' | \
+  llm --system 'based on these tests guess what this tool does'
+```
+It can also be used to export symbols in a format that can be piped to {ref}`llm embed-multi <embeddings-cli-embed-multi>` in order to create embeddings:
+```bash
+symbex '*' '*:*' --nl | \
+  llm embed-multi symbols - \
+  --format nl --database embeddings.db --store
+```
+For more examples see [Symbex: search Python code for functions and classes, then pipe them into a LLM](https://simonwillison.net/2023/Jun/18/symbex/).
+
+</document_content>
+</document>
+<document index="11">
+<source>docs/setup.md</source>
+<document_content>
+# Setup
+
+## Installation
+
+Install this tool using `pip`:
+```bash
+pip install llm
+```
+Or using [pipx](https://pypa.github.io/pipx/):
+```bash
+pipx install llm
+```
+Or using [Homebrew](https://brew.sh/) (see {ref}`warning note <homebrew-warning>`):
+```bash
+brew install llm
+```
+
+## Upgrading to the latest version
+
+If you installed using `pip`:
+```bash
+pip install -U llm
+```
+For `pipx`:
+```bash
+pipx upgrade llm
+```
+For Homebrew:
+```bash
+brew upgrade llm
+```
+If the latest version is not yet available on Homebrew you can upgrade like this instead:
+```bash
+llm install -U llm
+```
+
+(homebrew-warning)=
+## A note about Homebrew and PyTorch
+
+The version of LLM packaged for Homebrew currently uses Python 3.12. The PyTorch project do not yet have a stable release of PyTorch for that version of Python.
+
+This means that LLM plugins that depend on PyTorch such as [llm-sentence-transformers](https://github.com/simonw/llm-sentence-transformers) may not install cleanly with the Homebrew version of LLM.
+
+You can workaround this by manually installing PyTorch before installing `llm-sentence-transformers`:
+
+```bash
+llm install llm-python
+llm python -m pip install \
+  --pre torch torchvision \
+  --index-url https://download.pytorch.org/whl/nightly/cpu
+llm install llm-sentence-transformers
+```
+This should produce a working installation of that plugin.
+
+## Installing plugins
+
+{ref}`plugins` can be used to add support for other language models, including models that can run on your own device.
+
+For example, the [llm-gpt4all](https://github.com/simonw/llm-gpt4all) plugin adds support for 17 new models that can be installed on your own machine. You can install that like so:
+```bash
+llm install llm-gpt4all
+```
+
+(api-keys)=
+## API key management
+
+Many LLM models require an API key. These API keys can be provided to this tool using several different mechanisms.
+
+You can obtain an API key for OpenAI's language models from [the API keys page](https://platform.openai.com/api-keys) on their site.
+
+### Saving and using stored keys
+
+The easiest way to store an API key is to use the `llm keys set` command:
+
+```bash
+llm keys set openai
+```
+You will be prompted to enter the key like this:
+```
+% llm keys set openai
+Enter key:
+```
+Once stored, this key will be automatically used for subsequent calls to the API:
+
+```bash
+llm "Five ludicrous names for a pet lobster"
+```
+
+You can list the names of keys that have been set using this command:
+
+```bash
+llm keys
+```
+
+Keys that are stored in this way live in a file called `keys.json`. This file is located at the path shown when you run the following command:
+
+```bash
+llm keys path
+```
+
+On macOS this will be `~/Library/Application Support/io.datasette.llm/keys.json`. On Linux it may be something like `~/.config/io.datasette.llm/keys.json`.
+
+### Passing keys using the --key option
+
+Keys can be passed directly using the `--key` option, like this:
+
+```bash
+llm "Five names for pet weasels" --key sk-my-key-goes-here
+```
+You can also pass the alias of a key stored in the `keys.json` file. For example, if you want to maintain a personal API key you could add that like this:
+```bash
+llm keys set personal
+```
+And then use it for prompts like so:
+
+```bash
+llm "Five friendly names for a pet skunk" --key personal
+```
+
+### Keys in environment variables
+
+Keys can also be set using an environment variable. These are different for different models.
+
+For OpenAI models the key will be read from the `OPENAI_API_KEY` environment variable.
+
+The environment variable will be used if no `--key` option is passed to the command and there is not a key configured in `keys.json`
+
+To use an environment variable in place of the `keys.json` key run the prompt like this:
+```bash
+llm 'my prompt' --key $OPENAI_API_KEY
+```
+
+## Configuration
+
+You can configure LLM in a number of different ways.
+
+(setup-default-model)=
+### Setting a custom default model
+
+The model used when calling `llm` without the `-m/--model` option defaults to `gpt-4o-mini` - the fastest and least expensive OpenAI model.
+
+You can use the `llm models default` command to set a different default model. For GPT-4o (slower and more expensive, but more capable) run this:
+
+```bash
+llm models default gpt-4o
+```
+You can view the current model by running this:
+```
+llm models default
+```
+Any of the supported aliases for a model can be passed to this command.
+
+### Setting a custom directory location
+
+This tool stores various files - prompt templates, stored keys, preferences, a database of logs - in a directory on your computer.
+
+On macOS this is `~/Library/Application Support/io.datasette.llm/`.
+
+On Linux it may be something like `~/.config/io.datasette.llm/`.
+
+You can set a custom location for this directory by setting the `LLM_USER_PATH` environment variable:
+
+```bash
+export LLM_USER_PATH=/path/to/my/custom/directory
+```
+### Turning SQLite logging on and off
+
+By default, LLM will log every prompt and response you make to a SQLite database - see {ref}`logging` for more details.
+
+You can turn this behavior off by default by running:
+```bash
+llm logs off
+```
+Or turn it back on again with:
+```
+llm logs on
+```
+Run `llm logs status` to see the current states of the setting.
+</document_content>
+</document>
+<document index="12">
+<source>docs/templates.md</source>
+<document_content>
+(prompt-templates)=
+# Prompt templates
+
+Prompt templates can be created to reuse useful prompts with different input data.
+
+## Getting started
+
+The easiest way to create a template is using the `--save template_name` option.
+
+Here's how to create a template for summarizing text:
+
+```bash
+llm 'Summarize this: $input' --save summarize
+```
+You can also create templates using system prompts:
+```bash
+llm --system 'Summarize this' --save summarize
+```
+You can set the default model for a template using `--model`:
+
+```bash
+llm --system 'Summarize this' --model gpt-4 --save summarize
+```
+You can also save default parameters:
+```bash
+llm --system 'Summarize this text in the voice of $voice' \
+  --model gpt-4 -p voice GlaDOS --save summarize
+```
+## Using a template
+
+You can execute a named template using the `-t/--template` option:
+
+```bash
+curl -s https://example.com/ | llm -t summarize
+```
+
+This can be combined with the `-m` option to specify a different model:
+```bash
+curl -s https://llm.datasette.io/en/latest/ | \
+  llm -t summarize -m gpt-3.5-turbo-16k
+```
+## Listing available templates
+
+This command lists all available templates:
+```bash
+llm templates
+```
+The output looks something like this:
+```
+cmd        : system: reply with macos terminal commands only, no extra information
+glados     : system: You are GlaDOS prompt: Summarize this: $input
+```
+
+## Templates as YAML files
+
+Templates are stored as YAML files on disk.
+
+You can edit (or create) a YAML file for a template using the `llm templates edit` command:
+```
+llm templates edit summarize
+```
+This will open the system default editor.
+
+:::{tip}
+You can control which editor will be used here using the `EDITOR` environment variable - for example, to use VS Code:
+
+    export EDITOR="code -w"
+
+Add that to your `~/.zshrc` or `~/.bashrc` file depending on which shell you use (`zsh` is the default on macOS since macOS Catalina in 2019).
+:::
+
+You can also create a file called `summary.yaml` in the folder shown by running `llm templates path`, for example:
+```bash
+$ llm templates path
+/Users/simon/Library/Application Support/io.datasette.llm/templates
+```
+
+You can also represent this template as a YAML dictionary with a `prompt:` key, like this one:
+
+```yaml
+prompt: 'Summarize this: $input'
+```
+Or use YAML multi-line strings for longer inputs. I created this using `llm templates edit steampunk`:
+```yaml
+prompt: >
+    Summarize the following text.
+
+    Insert frequent satirical steampunk-themed illustrative anecdotes.
+    Really go wild with that.
+
+    Text to summarize: $input
+```
+The `prompt: >` causes the following indented text to be treated as a single string, with newlines collapsed to spaces. Use `prompt: |` to preserve newlines.
+
+Running that with `llm -t steampunk` against GPT-4 (via [strip-tags](https://github.com/simonw/strip-tags) to remove HTML tags from the input and minify whitespace):
+```bash
+curl -s 'https://til.simonwillison.net/macos/imovie-slides-and-audio' | \
+  strip-tags -m | llm -t steampunk -m 4
+```
+Output:
+> In a fantastical steampunk world, Simon Willison decided to merge an old MP3 recording with slides from the talk using iMovie. After exporting the slides as images and importing them into iMovie, he had to disable the default Ken Burns effect using the "Crop" tool. Then, Simon manually synchronized the audio by adjusting the duration of each image. Finally, he published the masterpiece to YouTube, with the whimsical magic of steampunk-infused illustrations leaving his viewers in awe.
+
+## System templates
+
+When working with models that support system prompts (such as `gpt-3.5-turbo` and `gpt-4`) you can set a system prompt using a `system:` key like so:
+
+```yaml
+system: Summarize this
+```
+If you specify only a system prompt you don't need to use the `$input` variable - `llm` will use the user's input as the whole of the regular prompt, which will then be processed using the instructions set in that system prompt.
+
+You can combine system and regular prompts like so:
+
+```yaml
+system: You speak like an excitable Victorian adventurer
+prompt: 'Summarize this: $input'
+```
+
+## Additional template variables
+
+Templates that work against the user's normal input (content that is either piped to the tool via standard input or passed as a command-line argument) use just the `$input` variable.
+
+You can use additional named variables. These will then need to be provided using the `-p/--param` option when executing the template.
+
+Here's an example template called `recipe`, created using `llm templates edit recipe`:
+
+```yaml
+prompt: |
+    Suggest a recipe using ingredients: $ingredients
+
+    It should be based on cuisine from this country: $country
+```
+This can be executed like so:
+
+```bash
+llm -t recipe -p ingredients 'sausages, milk' -p country Germany
+```
+My output started like this:
+> Recipe: German Sausage and Potato Soup
+>
+> Ingredients:
+> - 4 German sausages
+> - 2 cups whole milk
+
+This example combines input piped to the tool with additional parameters. Call this `summarize`:
+
+```yaml
+system: Summarize this text in the voice of $voice
+```
+Then to run it:
+```bash
+curl -s 'https://til.simonwillison.net/macos/imovie-slides-and-audio' | \
+  strip-tags -m | llm -t summarize -p voice GlaDOS
+```
+I got this:
+
+> My previous test subject seemed to have learned something new about iMovie. They exported keynote slides as individual images [...] Quite impressive for a human.
+
+(prompt-default-parameters)=
+## Specifying default parameters
+
+You can also specify default values for parameters, using a `defaults:` key.
+
+```yaml
+system: Summarize this text in the voice of $voice
+defaults:
+  voice: GlaDOS
+```
+
+When running without `-p` it will choose the default:
+
+```bash
+curl -s 'https://til.simonwillison.net/macos/imovie-slides-and-audio' | \
+  strip-tags -m | llm -t summarize
+```
+
+But you can override the defaults with `-p`:
+
+```bash
+curl -s 'https://til.simonwillison.net/macos/imovie-slides-and-audio' | \
+  strip-tags -m | llm -t summarize -p voice Yoda
+```
+
+I got this:
+
+> Text, summarize in Yoda's voice, I will: "Hmm, young padawan. Summary of this text, you seek. Hmmm. ...
+
+## Setting a default model for a template
+
+Templates executed using `llm -t template-name` will execute using the default model that the user has configured for the tool - or `gpt-3.5-turbo` if they have not configured their own default.
+
+You can specify a new default model for a template using the `model:` key in the associated YAML. Here's a template called `roast`:
+
+```yaml
+model: gpt-4
+system: roast the user at every possible opportunity, be succinct
+```
+Example:
+```bash
+llm -t roast 'How are you today?'
+```
+> I'm doing great but with your boring questions, I must admit, I've seen more life in a cemetery.
+
+</document_content>
+</document>
+<document index="13">
+<source>docs/usage.md</source>
+<document_content>
+(usage)=
+# Usage
+
+The command to run a prompt is `llm prompt 'your prompt'`. This is the default command, so you can use `llm 'your prompt'` as a shortcut.
+
+(usage-executing-prompts)=
+## Executing a prompt
+
+These examples use the default OpenAI `gpt-4o-mini` model, which requires you to first {ref}`set an OpenAI API key <api-keys>`.
+
+You can {ref}`install LLM plugins <installing-plugins>` to use models from other providers, including openly licensed models you can run directly on your own computer.
+
+To run a prompt, streaming tokens as they come in:
+```bash
+llm 'Ten names for cheesecakes'
+```
+To disable streaming and only return the response once it has completed:
+```bash
+llm 'Ten names for cheesecakes' --no-stream
+```
+To switch from ChatGPT 4o-mini (the default) to GPT-4o:
+```bash
+llm 'Ten names for cheesecakes' -m gpt-4o
+```
+You can use `-m 4o` as an even shorter shortcut.
+
+Pass `--model <model name>` to use a different model. Run `llm models` to see a list of available models.
+
+You can also send a prompt to standard input, for example:
+```bash
+echo 'Ten names for cheesecakes' | llm
+```
+If you send text to standard input and provide arguments, the resulting prompt will consist of the piped content followed by the arguments:
+```bash
+cat myscript.py | llm 'explain this code'
+```
+Will run a prompt of:
+```
+<contents of myscript.py> explain this code
+```
+For models that support them, {ref}`system prompts <system-prompts>` are a better tool for this kind of prompting.
+
+Some models support options. You can pass these using `-o/--option name value` - for example, to set the temperature to 1.5 run this:
+
+```bash
+llm 'Ten names for cheesecakes' -o temperature 1.5
+```
+(usage-attachments)=
+### Attachments
+
+Some models are multi-modal, which means they can accept input in more than just text. GPT-4o and GPT-4o mini can accept images, and models such as Google Gemini 1.5 can accept audio and video as well.
+
+LLM calls these **attachments**. You can pass attachments using the `-a` option like this:
+
+```bash
+llm "describe this image" -a https://static.simonwillison.net/static/2024/pelicans.jpg
+```
+Attachments can be passed using URLs or file paths, and you can attach more than one attachment to a single prompt:
+```bash
+llm "extract text" -a image1.jpg -a image2.jpg
+```
+You can also pipe an attachment to LLM by using `-` as the filename:
+```bash
+cat image.jpg | llm "describe this image" -a -
+```
+LLM will attempt to automatically detect the content type of the image. If this doesn't work you can instead use the `--attachment-type` option (`--at` for short) which takes the URL/path plus an explicit content type:
+```bash
+cat myfile | llm "describe this image" --at - image/jpeg
+```
+
+(system-prompts)=
+### System prompts
+
+You can use `-s/--system '...'` to set a system prompt.
+```bash
+llm 'SQL to calculate total sales by month' \
+  --system 'You are an exaggerated sentient cheesecake that knows SQL and talks about cheesecake a lot'
+```
+This is useful for piping content to standard input, for example:
+```bash
+curl -s 'https://simonwillison.net/2023/May/15/per-interpreter-gils/' | \
+  llm -s 'Suggest topics for this post as a JSON array'
+```
+Or to generate a description of changes made to a Git repository since the last commit:
+```bash
+git diff | llm -s 'Describe these changes'
+```
+Different models support system prompts in different ways.
+
+The OpenAI models are particularly good at using system prompts as instructions for how they should process additional input sent as part of the regular prompt.
+
+Other models might use system prompts change the default voice and attitude of the model.
+
+System prompts can be saved as {ref}`templates <prompt-templates>` to create reusable tools. For example, you can create a template called `pytest` like this:
+
+```bash
+llm -s 'write pytest tests for this code' --save pytest
+```
+And then use the new template like this:
+```bash
+cat llm/utils.py | llm -t pytest
+```
+See {ref}`prompt templates <prompt-templates>` for more.
+
+(conversation)=
+### Continuing a conversation
+
+By default, the tool will start a new conversation each time you run it.
+
+You can opt to continue the previous conversation by passing the `-c/--continue` option:
+```bash
+llm 'More names' -c
+```
+This will re-send the prompts and responses for the previous conversation as part of the call to the language model. Note that this can add up quickly in terms of tokens, especially if you are using expensive models.
+
+`--continue` will automatically use the same model as the conversation that you are continuing, even if you omit the `-m/--model` option.
+
+To continue a conversation that is not the most recent one, use the `--cid/--conversation <id>` option:
+```bash
+llm 'More names' --cid 01h53zma5txeby33t1kbe3xk8q
+```
+You can find these conversation IDs using the `llm logs` command.
+
+### Tips for using LLM with Bash or Zsh
+
+To learn more about your computer's operating system based on the output of `uname -a`, run this:
+```bash
+llm "Tell me about my operating system: $(uname -a)"
+```
+This pattern of using `$(command)` inside a double quoted string is a useful way to quickly assemble prompts.
+
+(usage-completion-prompts)=
+### Completion prompts
+
+Some models are completion models - rather than being tuned to respond to chat style prompts, they are designed to complete a sentence or paragraph.
+
+An example of this is the `gpt-3.5-turbo-instruct` OpenAI model.
+
+You can prompt that model the same way as the chat models, but be aware that the prompt format that works best is likely to differ.
+
+```bash
+llm -m gpt-3.5-turbo-instruct 'Reasons to tame a wild beaver:'
+```
+
+(usage-chat)=
+
+## Starting an interactive chat
+
+The `llm chat` command starts an ongoing interactive chat with a model.
+
+This is particularly useful for models that run on your own machine, since it saves them from having to be loaded into memory each time a new prompt is added to a conversation.
+
+Run `llm chat`, optionally with a `-m model_id`, to start a chat conversation:
+
+```bash
+llm chat -m chatgpt
+```
+Each chat starts a new conversation. A record of each conversation can be accessed through {ref}`the logs <logs-conversation>`.
+
+You can pass `-c` to start a conversation as a continuation of your most recent prompt. This will automatically use the most recently used model:
+
+```bash
+llm chat -c
+```
+
+For models that support them, you can pass options using `-o/--option`:
+```bash
+llm chat -m gpt-4 -o temperature 0.5
+```
+
+You can pass a system prompt to be used for your chat conversation:
+
+```bash
+llm chat -m gpt-4 -s 'You are a sentient cheesecake'
+```
+You can also pass {ref}`a template <prompt-templates>` - useful for creating chat personas that you wish to return to.
+
+Here's how to create a template for your GPT-4 powered cheesecake:
+```bash
+llm --system 'You are a sentient cheesecake' -m gpt-4 --save cheesecake
+```
+Now you can start a new chat with your cheesecake any time you like using this:
+```bash
+llm chat -t cheesecake
+```
+```
+Chatting with gpt-4
+Type 'exit' or 'quit' to exit
+Type '!multi' to enter multiple lines, then '!end' to finish
+> who are you?
+I am a sentient cheesecake, meaning I am an artificial
+intelligence embodied in a dessert form, specifically a
+cheesecake. However, I don't consume or prepare foods
+like humans do, I communicate, learn and help answer
+your queries.
+```
+
+Type `quit` or `exit` followed by `<enter>` to end a chat session.
+
+Sometimes you may want to paste multiple lines of text into a chat at once - for example when debugging an error message.
+
+To do that, type `!multi` to start a multi-line input. Type or paste your text, then type `!end` and hit `<enter>` to finish.
+
+If your pasted text might itself contain a `!end` line, you can set a custom delimiter using `!multi abc` followed by `!end abc` at the end:
+
+```
+Chatting with gpt-4
+Type 'exit' or 'quit' to exit
+Type '!multi' to enter multiple lines, then '!end' to finish
+> !multi custom-end
+ Explain this error:
+
+   File "/opt/homebrew/Caskroom/miniconda/base/lib/python3.10/urllib/request.py", line 1391, in https_open
+    return self.do_open(http.client.HTTPSConnection, req,
+  File "/opt/homebrew/Caskroom/miniconda/base/lib/python3.10/urllib/request.py", line 1351, in do_open
+    raise URLError(err)
+urllib.error.URLError: <urlopen error [Errno 8] nodename nor servname provided, or not known>
+
+ !end custom-end
+```
+
+## Listing available models
+
+The `llm models` command lists every model that can be used with LLM, along with their aliases. This includes models that have been installed using {ref}`plugins <plugins>`.
+
+```bash
+llm models
+```
+Example output:
+```
+OpenAI Chat: gpt-3.5-turbo (aliases: 3.5, chatgpt)
+OpenAI Chat: gpt-3.5-turbo-16k (aliases: chatgpt-16k, 3.5-16k)
+OpenAI Chat: gpt-4 (aliases: 4, gpt4)
+OpenAI Chat: gpt-4-32k (aliases: 4-32k)
+PaLM 2: chat-bison-001 (aliases: palm, palm2)
+```
+
+Add `--options` to also see documentation for the options supported by each model:
+```bash
+llm models --options
+```
+Output:
+<!-- [[[cog
+from click.testing import CliRunner
+from llm.cli import cli
+result = CliRunner().invoke(cli, ["models", "list", "--options"])
+cog.out("```\n{}\n```".format(result.output))
+]]] -->
+```
+OpenAI Chat: gpt-4o (aliases: 4o)
+  Options:
+    temperature: float
+      What sampling temperature to use, between 0 and 2. Higher values like
+      0.8 will make the output more random, while lower values like 0.2 will
+      make it more focused and deterministic.
+    max_tokens: int
+      Maximum number of tokens to generate.
+    top_p: float
+      An alternative to sampling with temperature, called nucleus sampling,
+      where the model considers the results of the tokens with top_p
+      probability mass. So 0.1 means only the tokens comprising the top 10%
+      probability mass are considered. Recommended to use top_p or
+      temperature but not both.
+    frequency_penalty: float
+      Number between -2.0 and 2.0. Positive values penalize new tokens based
+      on their existing frequency in the text so far, decreasing the model's
+      likelihood to repeat the same line verbatim.
+    presence_penalty: float
+      Number between -2.0 and 2.0. Positive values penalize new tokens based
+      on whether they appear in the text so far, increasing the model's
+      likelihood to talk about new topics.
+    stop: str
+      A string where the API will stop generating further tokens.
+    logit_bias: dict, str
+      Modify the likelihood of specified tokens appearing in the completion.
+      Pass a JSON string like '{"1712":-100, "892":-100, "1489":-100}'
+    seed: int
+      Integer seed to attempt to sample deterministically
+    json_object: boolean
+      Output a valid JSON object {...}. Prompt must mention JSON.
+  Attachment types:
+    image/gif, image/jpeg, image/png, image/webp
+OpenAI Chat: gpt-4o-mini (aliases: 4o-mini)
+  Options:
+    temperature: float
+    max_tokens: int
+    top_p: float
+    frequency_penalty: float
+    presence_penalty: float
+    stop: str
+    logit_bias: dict, str
+    seed: int
+    json_object: boolean
+  Attachment types:
+    image/gif, image/jpeg, image/png, image/webp
+OpenAI Chat: gpt-4o-audio-preview
+  Options:
+    temperature: float
+    max_tokens: int
+    top_p: float
+    frequency_penalty: float
+    presence_penalty: float
+    stop: str
+    logit_bias: dict, str
+    seed: int
+    json_object: boolean
+  Attachment types:
+    audio/mpeg, audio/wav
+OpenAI Chat: gpt-3.5-turbo (aliases: 3.5, chatgpt)
+  Options:
+    temperature: float
+    max_tokens: int
+    top_p: float
+    frequency_penalty: float
+    presence_penalty: float
+    stop: str
+    logit_bias: dict, str
+    seed: int
+    json_object: boolean
+OpenAI Chat: gpt-3.5-turbo-16k (aliases: chatgpt-16k, 3.5-16k)
+  Options:
+    temperature: float
+    max_tokens: int
+    top_p: float
+    frequency_penalty: float
+    presence_penalty: float
+    stop: str
+    logit_bias: dict, str
+    seed: int
+    json_object: boolean
+OpenAI Chat: gpt-4 (aliases: 4, gpt4)
+  Options:
+    temperature: float
+    max_tokens: int
+    top_p: float
+    frequency_penalty: float
+    presence_penalty: float
+    stop: str
+    logit_bias: dict, str
+    seed: int
+    json_object: boolean
+OpenAI Chat: gpt-4-32k (aliases: 4-32k)
+  Options:
+    temperature: float
+    max_tokens: int
+    top_p: float
+    frequency_penalty: float
+    presence_penalty: float
+    stop: str
+    logit_bias: dict, str
+    seed: int
+    json_object: boolean
+OpenAI Chat: gpt-4-1106-preview
+  Options:
+    temperature: float
+    max_tokens: int
+    top_p: float
+    frequency_penalty: float
+    presence_penalty: float
+    stop: str
+    logit_bias: dict, str
+    seed: int
+    json_object: boolean
+OpenAI Chat: gpt-4-0125-preview
+  Options:
+    temperature: float
+    max_tokens: int
+    top_p: float
+    frequency_penalty: float
+    presence_penalty: float
+    stop: str
+    logit_bias: dict, str
+    seed: int
+    json_object: boolean
+OpenAI Chat: gpt-4-turbo-2024-04-09
+  Options:
+    temperature: float
+    max_tokens: int
+    top_p: float
+    frequency_penalty: float
+    presence_penalty: float
+    stop: str
+    logit_bias: dict, str
+    seed: int
+    json_object: boolean
+OpenAI Chat: gpt-4-turbo (aliases: gpt-4-turbo-preview, 4-turbo, 4t)
+  Options:
+    temperature: float
+    max_tokens: int
+    top_p: float
+    frequency_penalty: float
+    presence_penalty: float
+    stop: str
+    logit_bias: dict, str
+    seed: int
+    json_object: boolean
+OpenAI Chat: o1-preview
+  Options:
+    temperature: float
+    max_tokens: int
+    top_p: float
+    frequency_penalty: float
+    presence_penalty: float
+    stop: str
+    logit_bias: dict, str
+    seed: int
+    json_object: boolean
+OpenAI Chat: o1-mini
+  Options:
+    temperature: float
+    max_tokens: int
+    top_p: float
+    frequency_penalty: float
+    presence_penalty: float
+    stop: str
+    logit_bias: dict, str
+    seed: int
+    json_object: boolean
+OpenAI Completion: gpt-3.5-turbo-instruct (aliases: 3.5-instruct, chatgpt-instruct)
+  Options:
+    temperature: float
+      What sampling temperature to use, between 0 and 2. Higher values like
+      0.8 will make the output more random, while lower values like 0.2 will
+      make it more focused and deterministic.
+    max_tokens: int
+      Maximum number of tokens to generate.
+    top_p: float
+      An alternative to sampling with temperature, called nucleus sampling,
+      where the model considers the results of the tokens with top_p
+      probability mass. So 0.1 means only the tokens comprising the top 10%
+      probability mass are considered. Recommended to use top_p or
+      temperature but not both.
+    frequency_penalty: float
+      Number between -2.0 and 2.0. Positive values penalize new tokens based
+      on their existing frequency in the text so far, decreasing the model's
+      likelihood to repeat the same line verbatim.
+    presence_penalty: float
+      Number between -2.0 and 2.0. Positive values penalize new tokens based
+      on whether they appear in the text so far, increasing the model's
+      likelihood to talk about new topics.
+    stop: str
+      A string where the API will stop generating further tokens.
+    logit_bias: dict, str
+      Modify the likelihood of specified tokens appearing in the completion.
+      Pass a JSON string like '{"1712":-100, "892":-100, "1489":-100}'
+    seed: int
+      Integer seed to attempt to sample deterministically
+    logprobs: int
+      Include the log probabilities of most likely N per token
+
+```
+<!-- [[[end]]] -->
+
+When running a prompt you can pass the full model name or any of the aliases to the `-m/--model` option:
+```bash
+llm -m 4o \
+  'As many names for cheesecakes as you can think of, with detailed descriptions'
+```
+
+</document_content>
+</document>
+</documents>
