@@ -1,0 +1,247 @@
+<documents>
+<document index="1">
+<source>docs/index.rst</source>
+<document_content>
+==============
+ sqlite-utils
+==============
+
+*Python utility functions for manipulating SQLite databases*
+
+This library aims to make creating a SQLite database from a collection of data as easy as possible.
+
+It is not intended to be a full ORM: the focus is utility helpers to make creating the initial database and populating it with data as productive as possible.
+
+Contents
+--------
+
+.. toctree::
+   :maxdepth: 2
+
+   table
+
+While the full documentation is being constructed, enjoy an example:
+
+.. code-block:: python
+
+    from sqlite_utils import Database
+    import sqlite3
+    import requests
+    import hashlib
+    import json
+
+    raw_ads = requests.get(
+        "https://raw.githubusercontent.com/edsu/irads/master/ads.json"
+    ).json()
+    print(raw_ads[0])
+    # {'clicks': 32,
+    #  'created': '2016-11-14T04:10:27-08:00',
+    #  'ended': None,
+    #  'file': 'data/2016-11/P(1)0001720.pdf',
+    #  'id': 3186,
+    #  'impressions': 396,
+    #  'spend': {'amount': '1050.77', 'currency': 'RUB'},
+    #  'targeting': {'age': ['18 - 65+'],
+    #   'excluded_connections': ['Exclude people who like Black guns matter'],
+    #   'language': ['English (UK)', 'English (US)'],
+    #   'location': ['United States'],
+    #   'people_who_match': {'interests': ['Martin Luther King',
+    #     'Jr.',
+    #     '2nd Amendment',
+    #     'National Rifle Association',
+    #     'African-American culture',
+    #     'African-American Civil Rights Movement (1954—68)',
+    #     'Gun Owners of America',
+    #     'African—American history',
+    #     'Second Amendment to the United States Constitution',
+    #     'Concealed carry in the United States',
+    #     'Firearm',
+    #     'Malcolm X']},
+    #   'placements': ['News Feed on desktop computers',
+    #    'News Feed on mobile devices',
+    #    'Right column on desktop computers']},
+    #  'text': 'Black American racial experience is real. We support the 2nd ammendment\nfor our safety.\n\n',
+    #  'url': 'https://www.facebook.com/ProtectBIackGunOwners/'}
+
+    def flatten_targeting(targeting, prefix=''):
+        # Convert targeting nested dictionary into list of strings
+        # e.g. people_who_match:interests:Martin Luther King
+        if isinstance(targeting, list) and all(isinstance(s, str) for s in targeting):
+            return ["{}:{}".format(prefix, item) for item in targeting]
+        elif isinstance(targeting, str):
+            return ["{}:{}".format(prefix, targeting)]
+        elif isinstance(targeting, dict):
+            items = []
+            for key, value in targeting.items():
+                new_prefix = "{}:{}".format(prefix, key) if prefix else key
+                items.extend(flatten_targeting(value, new_prefix))
+            return items
+
+    def hash_id(s):
+        return hashlib.md5(s.encode("utf8")).hexdigest()[:5]
+
+    database = Database(sqlite3.connect("/tmp/ads3.db"))
+
+    ads = database["ads"]
+    targets = database["targets"]
+    ad_targets = database["ad_targets"]
+
+    for ad in raw_ads:
+        ad_id = int(ad["file"].split(')')[-1].split(".")[0])
+        record = {
+            "id": ad_id,
+            "file": ad["file"],
+            "clicks": ad["clicks"],
+            "impressions": ad["impressions"],
+            "text": ad["text"],
+            "url": (ad["url"] or "").replace("httpszll", "https://"),
+            "spend_amount": ad["spend"]["amount"],
+            "spend_currency": ad["spend"]["currency"] or "USD",
+            "created": ad["created"],
+            "ended": ad["ended"],
+        }
+        ads.upsert(record, pk="id")
+        for target in flatten_targeting(ad["targeting"]):
+            target_id = hash_id(target)
+            targets.upsert({
+                "id": target_id,
+                "name": target,
+                "category": target.split(":")[0],
+                "prefix": target.rsplit(":", 1)[0]},
+                pk="id"
+            )
+            ad_targets.insert({
+                "target_id": target_id,
+                "ad_id": ad_id,
+            }, foreign_keys=(
+                ("ad_id", "INTEGER", "ads", "id"),
+                ("target_id", "TEXT", "targets", "id"),
+            ))
+
+</document_content>
+</document>
+<document index="2">
+<source>docs/table.rst</source>
+<document_content>
+=======
+ Table
+=======
+
+Tables are accessed using the indexing operator, like so:
+
+.. code-block:: python
+
+    from sqlite_utils import Database
+    import sqlite3
+
+    db = Database(sqlite3.connect("my_database.db"))
+    table = db["my_table"]
+
+If the table does not yet exist, it will be created the first time you attempt to insert or upsert data into it.
+
+Creating tables
+===============
+
+The easiest way to create a new table is to insert a record into it:
+
+.. code-block:: python
+
+    from sqlite_utils import Database
+    import sqlite3
+
+    db = Database(sqlite3.connect("/tmp/dogs.db"))
+    dogs = db["dogs"]
+    dogs.insert({
+        "name": "Cleo",
+        "twitter": "cleopaws",
+        "age": 3,
+        "is_good_dog": True,
+    })
+
+This will automatically create a new table called "dogs" with the following schema::
+
+    CREATE TABLE dogs (
+        name TEXT,
+        twitter TEXT,
+        age INTEGER,
+        is_good_dog INTEGER
+    )
+
+The column types are automatically derived from the types of the incoming data.
+
+You can also specify a primary key by passing the ``pk=`` parameter to the ``.insert()`` call. This will only be obeyed if the record being inserted causes the table to be created:
+
+.. code-block:: python
+
+    dogs.insert({
+        "id": 1,
+        "name": "Cleo",
+        "twitter": "cleopaws",
+        "age": 3,
+        "is_good_dog": True,
+    }, pk="id")
+
+Introspection
+=============
+
+If you have loaded an existing table, you can use introspection to find out more about it::
+
+    >>> db["PlantType"]
+    <sqlite_utils.db.Table at 0x10f5960b8>
+
+The ``.count`` property shows the current number of rows (``select count(*) from table``)::
+
+    >>> db["PlantType"].count
+    3
+    >>> db["Street_Tree_List"].count
+    189144
+
+The ``.columns`` property shows the columns in the table::
+
+    >>> db["PlantType"].columns
+    [Column(cid=0, name='id', type='INTEGER', notnull=0, default_value=None, is_pk=1),
+     Column(cid=1, name='value', type='TEXT', notnull=0, default_value=None, is_pk=0)]
+
+The ``.foreign_keys`` property shows if the table has any foreign key relationships::
+
+    >>> db["Street_Tree_List"].foreign_keys
+    [ForeignKey(table='Street_Tree_List', column='qLegalStatus', other_table='qLegalStatus', other_column='id'),
+     ForeignKey(table='Street_Tree_List', column='qCareAssistant', other_table='qCareAssistant', other_column='id'),
+     ForeignKey(table='Street_Tree_List', column='qSiteInfo', other_table='qSiteInfo', other_column='id'),
+     ForeignKey(table='Street_Tree_List', column='qSpecies', other_table='qSpecies', other_column='id'),
+     ForeignKey(table='Street_Tree_List', column='qCaretaker', other_table='qCaretaker', other_column='id'),
+     ForeignKey(table='Street_Tree_List', column='PlantType', other_table='PlantType', other_column='id')]
+
+The ``.schema`` property outputs the table's schema as a SQL string::
+
+    >>> print(db["Street_Tree_List"].schema)
+    CREATE TABLE "Street_Tree_List" (
+    "TreeID" INTEGER,
+      "qLegalStatus" INTEGER,
+      "qSpecies" INTEGER,
+      "qAddress" TEXT,
+      "SiteOrder" INTEGER,
+      "qSiteInfo" INTEGER,
+      "PlantType" INTEGER,
+      "qCaretaker" INTEGER,
+      "qCareAssistant" INTEGER,
+      "PlantDate" TEXT,
+      "DBH" INTEGER,
+      "PlotSize" TEXT,
+      "PermitNotes" TEXT,
+      "XCoord" REAL,
+      "YCoord" REAL,
+      "Latitude" REAL,
+      "Longitude" REAL,
+      "Location" TEXT
+    ,
+    FOREIGN KEY ("PlantType") REFERENCES [PlantType](id),
+        FOREIGN KEY ("qCaretaker") REFERENCES [qCaretaker](id),
+        FOREIGN KEY ("qSpecies") REFERENCES [qSpecies](id),
+        FOREIGN KEY ("qSiteInfo") REFERENCES [qSiteInfo](id),
+        FOREIGN KEY ("qCareAssistant") REFERENCES [qCareAssistant](id),
+        FOREIGN KEY ("qLegalStatus") REFERENCES [qLegalStatus](id))
+
+</document_content>
+</document>
+</documents>

@@ -1,0 +1,861 @@
+<documents>
+<document index="1">
+<source>docs/changelog.rst</source>
+<document_content>
+===========
+ Changelog
+===========
+
+.. _v0_13:
+
+0.13 (2019-02-23)
+-----------------
+
+- New ``--table`` and ``--fmt`` options can be used to output query results in a variety of visual table formats, see :ref:`cli_query_table`
+- New ``hash_id=`` argument can now be used for :ref:`python_api_hash`
+- Can now derive correct column types for numpy int, uint and float values
+- ``table.last_id`` has been renamed to ``table.last_rowid``
+- ``table.last_pk`` now contains the last inserted primary key, if ``pk=`` was specified
+- Prettier indentation in the ``CREATE TABLE`` generated schemas
+
+.. _v0_12:
+
+0.12 (2019-02-22)
+-----------------
+
+- Added ``db[table].rows`` iterator - see :ref:`python_api_rows`
+- Replaced ``sqlite-utils json`` and ``sqlite-utils csv`` with a new default subcommand called ``sqlite-utils query`` which defaults to JSON and takes formatting options ``--nl``, ``--csv`` and ``--no-headers`` - see :ref:`cli_query_json` and :ref:`cli_query_csv`
+- New ``sqlite-utils rows data.db name-of-table`` command, see :ref:`cli_rows`
+- ``sqlite-utils table`` command now takes options ``--counts`` and ``--columns`` plus the standard output format options, see :ref:`cli_tables`
+
+.. _v0_11:
+
+0.11 (2019-02-07)
+-----------------
+
+New commands for enabling FTS against a table and columns::
+
+    sqlite-utils enable-fts db.db mytable col1 col2
+
+See :ref:`cli_fts`.
+
+.. _v0_10:
+
+0.10 (2019-02-06)
+-----------------
+
+Handle ``datetime.date`` and ``datetime.time`` values.
+
+New option for efficiently inserting rows from a CSV:
+::
+
+    sqlite-utils insert db.db foo - --csv
+
+.. _v0_9:
+
+0.9 (2019-01-27)
+----------------
+
+Improved support for newline-delimited JSON.
+
+``sqlite-utils insert`` has two new command-line options:
+
+* ``--nl`` means "expect newline-delimited JSON". This is an extremely efficient way of loading in large amounts of data, especially if you pipe it into standard input.
+* ``--batch-size=1000`` lets you increase the batch size (default is 100). A commit will be issued every X records. This also control how many initial records are considered when detecting the desired SQL table schema for the data.
+
+In the Python API, the ``table.insert_all(...)`` method can now accept a generator as well as a list of objects. This will be efficiently used to populate the table no matter how many records are produced by the generator.
+
+The ``Database()`` constructor can now accept a ``pathlib.Path`` object in addition to a string or an existing SQLite connection object.
+
+.. _v0_8:
+
+0.8 (2019-01-25)
+----------------
+
+Two new commands: ``sqlite-utils csv`` and ``sqlite-utils json``
+
+These commands execute a SQL query and return the results as CSV or JSON. See :ref:`cli_query_csv` and :ref:`cli_query_json` for more details.
+
+::
+
+    $ sqlite-utils json --help
+    Usage: sqlite-utils json [OPTIONS] PATH SQL
+
+      Execute SQL query and return the results as JSON
+
+    Options:
+      --nl      Output newline-delimited JSON
+      --arrays  Output rows as arrays instead of objects
+      --help    Show this message and exit.
+
+    $ sqlite-utils csv --help
+    Usage: sqlite-utils csv [OPTIONS] PATH SQL
+
+      Execute SQL query and return the results as CSV
+
+    Options:
+      --no-headers  Exclude headers from CSV output
+      --help        Show this message and exit.
+
+.. _v0_7:
+
+0.7 (2019-01-24)
+----------------
+
+This release implements the ``sqlite-utils`` command-line tool with a number of useful subcommands.
+
+- ``sqlite-utils tables demo.db`` lists the tables in the database
+- ``sqlite-utils tables demo.db --fts4`` shows just the FTS4 tables
+- ``sqlite-utils tables demo.db --fts5`` shows just the FTS5 tables
+- ``sqlite-utils vacuum demo.db`` runs VACUUM against the database
+- ``sqlite-utils optimize demo.db`` runs OPTIMIZE against all FTS tables, then VACUUM
+- ``sqlite-utils optimize demo.db --no-vacuum`` runs OPTIMIZE but skips VACUUM
+
+The two most useful subcommands are ``upsert`` and ``insert``, which allow you to ingest JSON files with one or more records in them, creating the corresponding table with the correct columns if it does not already exist. See :ref:`cli_inserting_data` for more details.
+
+- ``sqlite-utils insert demo.db dogs dogs.json --pk=id`` inserts new records from ``dogs.json`` into the ``dogs`` table
+- ``sqlite-utils upsert demo.db dogs dogs.json --pk=id`` upserts records, replacing any records with duplicate primary keys
+
+
+One backwards incompatible change: the ``db["table"].table_names`` property is now a method:
+
+- ``db["table"].table_names()`` returns a list of table names
+- ``db["table"].table_names(fts4=True)`` returns a list of just the FTS4 tables
+- ``db["table"].table_names(fts5=True)`` returns a list of just the FTS5 tables
+
+A few other changes:
+
+- Plenty of updated documentation, including full coverage of the new command-line tool
+- Allow column names to be reserved words (use correct SQL escaping)
+- Added automatic column support for bytes and datetime.datetime
+
+.. _v0_6:
+
+0.6 (2018-08-12)
+----------------
+
+- ``.enable_fts()`` now takes optional argument ``fts_version``, defaults to ``FTS5``. Use ``FTS4`` if the version of SQLite bundled with your Python does not support FTS5
+- New optional ``column_order=`` argument to ``.insert()`` and friends for providing a partial or full desired order of the columns when a database table is created
+- :ref:`New documentation <python_api>` for ``.insert_all()`` and ``.upsert()`` and ``.upsert_all()``
+
+.. _v0_5:
+
+0.5 (2018-08-05)
+----------------
+
+- ``db.tables`` and ``db.table_names`` introspection properties
+- ``db.indexes`` property for introspecting indexes
+- ``table.create_index(columns, index_name)`` method
+- ``db.create_view(name, sql)`` method
+- Table methods can now be chained, plus added ``table.last_id`` for accessing the last inserted row ID
+
+0.4 (2018-07-31)
+----------------
+
+- ``enable_fts()``, ``populate_fts()`` and ``search()`` table methods
+
+</document_content>
+</document>
+<document index="2">
+<source>docs/cli.rst</source>
+<document_content>
+.. _cli:
+
+================================
+ sqlite-utils command-line tool
+================================
+
+The ``sqlite-utils`` command-line tool can be used to manipulate SQLite databases in a number of different ways.
+
+.. _cli_query_json:
+
+Running queries and returning JSON
+==================================
+
+You can execute a SQL query against a database and get the results back as JSON like this::
+
+    $ sqlite-utils query dogs.db "select * from dogs"
+    [{"id": 1, "age": 4, "name": "Cleo"},
+     {"id": 2, "age": 2, "name": "Pancakes"}]
+
+This is the default subcommand for ``sqlite-utils``, so you can instead use this::
+
+    $ sqlite-utils dogs.db "select * from dogs"
+
+Use ``--nl`` to get back newline-delimited JSON objects::
+
+    $ sqlite-utils dogs.db "select * from dogs" --nl
+    {"id": 1, "age": 4, "name": "Cleo"}
+    {"id": 2, "age": 2, "name": "Pancakes"}
+
+You can use ``--arrays`` to request ararys instead of objects::
+
+    $ sqlite-utils dogs.db "select * from dogs" --arrays
+    [[1, 4, "Cleo"],
+     [2, 2, "Pancakes"]]
+
+You can also combine ``--arrays`` and ``--nl``::
+
+    $ sqlite-utils dogs.db "select * from dogs" --arrays --nl 
+    [1, 4, "Cleo"]
+    [2, 2, "Pancakes"]
+
+If you want to pretty-print the output further, you can pipe it through ``python -mjson.tool``::
+
+    $ sqlite-utils dogs.db "select * from dogs" | python -mjson.tool
+    [
+        {
+            "id": 1,
+            "age": 4,
+            "name": "Cleo"
+        },
+        {
+            "id": 2,
+            "age": 2,
+            "name": "Pancakes"
+        }
+    ]
+
+.. _cli_query_csv:
+
+Running queries and returning CSV
+=================================
+
+You can use the ``--csv`` option (or ``-c`` shortcut) to return results as CSV::
+
+    $ sqlite-utils dogs.db "select * from dogs" --csv
+    id,age,name
+    1,4,Cleo
+    2,2,Pancakes
+
+This will default to including the column names as a header row. To exclude the headers, use ``--no-headers``::
+
+    $ sqlite-utils dogs.db "select * from dogs" --csv --no-headers
+    1,4,Cleo
+    2,2,Pancakes
+
+.. _cli_query_table:
+
+Running queries and outputting a table
+======================================
+
+You can use the ``--table`` option (or ``-t`` shortcut) to output query results as a table::
+
+    $ sqlite-utils dogs.db "select * from dogs" --table
+      id    age  name
+    ----  -----  --------
+       1      4  Cleo
+       2      2  Pancakes
+
+You can use the ``--fmt`` (or ``-f``) option to specify different table formats, for example ``rst`` for reStructuredText::
+
+    $ sqlite-utils dogs.db "select * from dogs" --table --fmt rst
+    ====  =====  ========
+      id    age  name
+    ====  =====  ========
+       1      4  Cleo
+       2      2  Pancakes
+    ====  =====  ========
+
+For a full list of table format options, run ``sqlite-utils query --help``.
+
+.. _cli_rows:
+
+Returning all rows in a table
+=============================
+
+You can return every row in a specified table using the ``rows`` subcommand::
+
+    $ sqlite-utils rows dogs.db dogs
+    [{"id": 1, "age": 4, "name": "Cleo"},
+     {"id": 2, "age": 2, "name": "Pancakes"}]
+
+This command accepts the same output options as ``query`` - so you can pass ``--nl``, ``--csv``, ``--no-headers``, ``--table`` and ``--fmt``.
+
+.. _cli_tables:
+
+Listing tables
+==============
+
+You can list the names of tables in a database using the ``tables`` subcommand::
+
+    $ sqlite-utils tables mydb.db
+    [{"table": "dogs"},
+     {"table": "cats"},
+     {"table": "chickens"}]
+
+You can output this list in CSV using the ``-csv`` option::
+
+    $ sqlite-utils tables mydb.db --csv --no-headers
+    dogs
+    cats
+    chickens
+
+If you just want to see the FTS4 tables, you can use ``--fts4`` (or ``--fts5`` for FTS5 tables)::
+
+    $ sqlite-utils tables docs.db --fts4
+    [{"table": "docs_fts"}]
+
+Use ``--counts`` to include a count of the number of rows in each table::
+
+    $ sqlite-utils tables mydb.db --counts
+    [{"table": "dogs", "count": 12},
+     {"table": "cats", "count": 332},
+     {"table": "chickens", "count": 9}]
+
+Use ``--columns`` to include a list of columns in each table::
+
+    $ sqlite-utils tables dogs.db --counts --columns
+    [{"table": "Gosh", "count": 0, "columns": ["c1", "c2", "c3"]},
+     {"table": "Gosh2", "count": 0, "columns": ["c1", "c2", "c3"]},
+     {"table": "dogs", "count": 2, "columns": ["id", "age", "name"]}]
+
+The ``--nl``, ``--csv`` and ``--table`` options are all available.
+
+.. _cli_inserting_data:
+
+Inserting data
+==============
+
+If you have data as JSON, you can use ``sqlite-utils insert tablename`` to insert it into a database. The table will be created with the correct (automatically detected) columns if it does not already exist.
+
+You can pass in a single JSON object or a list of JSON objects, either as a filename or piped directly to standard-in (by using ``-`` as the filename).
+
+Here's the simplest possible example::
+
+    $ echo '{"name": "Cleo", "age": 4}' | sqlite-utils insert dogs.db dogs -
+
+To specify a column as the primary key, use ``--pk=column_name``.
+
+If you feed it a JSON list it will insert multiple records. For example, if ``dogs.json`` looks like this::
+
+    [
+        {
+            "id": 1,
+            "name": "Cleo",
+            "age": 4
+        },
+        {
+            "id": 2,
+            "name": "Pancakes",
+            "age": 2
+        },
+        {
+            "id": 3,
+            "name": "Toby",
+            "age": 6
+        }
+    ]
+
+You can import all three records into an automatically created ``dogs`` table and set the ``id`` column as the primary key like so::
+
+    $ sqlite-utils insert dogs.db dogs dogs.json --pk=id
+
+You can also import newline-delimited JSON using the ``--nl`` option. Since `Datasette <https://datasette.readthedocs.io/>`__ can export newline-delimited JSON, you can combine the two tools like so::
+
+    $ curl -L "https://latest.datasette.io/fixtures/facetable.json?_shape=array&_nl=on" \
+        | sqlite-utils insert nl-demo.db facetable - --pk=id --nl
+
+This also means you pipe ``sqlite-utils`` together to easily create a new SQLite database file containing the results of a SQL query against another database::
+
+    $ sqlite-utils json sf-trees.db \
+        "select TreeID, qAddress, Latitude, Longitude from Street_Tree_List" --nl \
+      | sqlite-utils insert saved.db trees - --nl
+    # This creates saved.db with a single table called trees:
+    $ sqlite-utils csv saved.db "select * from trees limit 5"
+    TreeID,qAddress,Latitude,Longitude
+    141565,501X Baker St,37.7759676911831,-122.441396661871
+    232565,940 Elizabeth St,37.7517102172731,-122.441498017841
+    119263,495X Lakeshore Dr,,
+    207368,920 Kirkham St,37.760210314285,-122.47073935813
+    188702,1501 Evans Ave,37.7422086702947,-122.387293152263
+
+Upserting data
+==============
+
+Upserting works exactly like inserting, with the exception that if your data has a primary key that matches an already exsting record that record will be replaced with the new data.
+
+After running the above ``dogs.json`` example, try running this::
+
+    $ echo '{"id": 2, "name": "Pancakes", "age": 3}' | \
+        sqlite-utils upsert dogs.db dogs - --pk=id
+
+This will replace the record for id=2 (Pancakes) with a new record with an updated age.
+
+.. _cli_fts:
+
+Configuring full-text search
+============================
+
+You can enable SQLite full-text search on a table and a set of columns like this::
+
+    $ sqlite-utils enable-fts mydb.db documents title summary
+
+This will use SQLite's FTS5 module by default. Use ``--fts4`` if you want to use FTS4::
+
+    $ sqlite-utils enable-fts mydb.db documents title summary --fts4
+
+The ``enable-fts`` command will populate the new index with all existing documents. If you later add more documents you will need to use ``populate-fts`` to cause them to be indexed as well::
+
+    $ sqlite-utils populate-fts mydb.db documents title summary
+
+Vacuum
+======
+
+You can run VACUUM to optimize your database like so::
+
+    $ sqlite-utils vacuum mydb.db
+
+Optimize
+========
+
+The optimize command can dramatically reduce the size of your database if you are using SQLite full-text search. It runs OPTIMIZE against all of our FTS4 and FTS5 tables, then runs VACUUM.
+
+If you just want to run OPTIMIZE without the VACUUM, use the ``--no-vacuum`` flag.
+
+::
+
+    # Optimize all FTS tables and then VACUUM
+    $ sqlite-utils optimize mydb.db
+
+    # Optimize but skip the VACUUM
+    $ sqlite-utils optimize --no-vacuum mydb.db
+
+</document_content>
+</document>
+<document index="3">
+<source>docs/index.rst</source>
+<document_content>
+==============
+ sqlite-utils
+==============
+
+*Python utility functions for manipulating SQLite databases*
+
+This library and command-line utility helps create SQLite databases from an existing collection of data.
+
+Most of the functionality is available as either a Python API or through the ``sqlite-utils`` command-line tool.
+
+sqlite-utils is not intended to be a full ORM: the focus is utility helpers to make creating the initial database and populating it with data as productive as possible.
+
+It is designed as a useful complement to `Datasette <https://github.com/simonw/datasette>`_.
+
+Contents
+--------
+
+.. toctree::
+   :maxdepth: 2
+
+   cli
+   python-api
+   changelog
+
+Take a look at `this script <https://github.com/simonw/russian-ira-facebook-ads-datasette/blob/master/fetch_and_build_russian_ads.py>`_ for an example of this library in action.
+
+</document_content>
+</document>
+<document index="4">
+<source>docs/python-api.rst</source>
+<document_content>
+.. _python_api:
+
+============
+ Python API
+============
+
+Connecting to or creating a database
+====================================
+
+Database objects are constructed by passing in either a path to a file on disk or an existing SQLite3 database connection:
+
+.. code-block:: python
+
+    from sqlite_utils import Database
+
+    db = Database("my_database.db")
+
+This will create ``my_database.db`` if it does not already exist. You can also pass in an existing SQLite connection:
+
+.. code-block:: python
+
+    import sqlite3
+
+    db = Database(sqlite3.connect("my_database.db"))
+
+If you want to create an in-memory database, you con do so like this:
+
+.. code-block:: python
+
+    db = Database(sqlite3.connect(":memory:"))
+
+Tables are accessed using the indexing operator, like so:
+
+.. code-block:: python
+
+    table = db["my_table"]
+
+If the table does not yet exist, it will be created the first time you attempt to insert or upsert data into it.
+
+Listing tables
+==============
+
+You can list the names of tables in a database using the ``.table_names()`` method::
+
+    >>> db.table_names()
+    ['dogs']
+
+To see just the FTS4 tables, use ``.table_names(fts4=True)``. For FTS5, use ``.table_names(fts5=True)``.
+
+You can also iterate through the table objects themselves using the ``.tables`` property::
+
+    >>> db.tables
+    [<Table dogs>]
+
+.. _python_api_rows:
+
+Listing rows
+============
+
+To iterate through dictionaries for each of the rows in a table, use ``.rows``::
+
+    >>> db = sqlite_utils.Database("dogs.db")
+    >>> for row in db["dogs"].rows:
+    ...     print(row)
+    {'id': 1, 'age': 4, 'name': 'Cleo'}
+    {'id': 2, 'age': 2, 'name': 'Pancakes'}
+
+Creating tables
+===============
+
+The easiest way to create a new table is to insert a record into it:
+
+.. code-block:: python
+
+    from sqlite_utils import Database
+    import sqlite3
+
+    db = Database(sqlite3.connect("/tmp/dogs.db"))
+    dogs = db["dogs"]
+    dogs.insert({
+        "name": "Cleo",
+        "twitter": "cleopaws",
+        "age": 3,
+        "is_good_dog": True,
+    })
+
+This will automatically create a new table called "dogs" with the following schema::
+
+    CREATE TABLE dogs (
+        name TEXT,
+        twitter TEXT,
+        age INTEGER,
+        is_good_dog INTEGER
+    )
+
+You can also specify a primary key by passing the ``pk=`` parameter to the ``.insert()`` call. This will only be obeyed if the record being inserted causes the table to be created:
+
+.. code-block:: python
+
+    dogs.insert({
+        "id": 1,
+        "name": "Cleo",
+        "twitter": "cleopaws",
+        "age": 3,
+        "is_good_dog": True,
+    }, pk="id")
+
+The order of the columns in the table will be derived from the order of the keys in the dictionary, provided you are using Python 3.6 or later.
+
+If you want to explicitly set the order of the columns you can do so using the ``column_order=`` parameter:
+
+.. code-block:: python
+
+    dogs.insert({
+        "id": 1,
+        "name": "Cleo",
+        "twitter": "cleopaws",
+        "age": 3,
+        "is_good_dog": True,
+    }, pk="id", column_order=("id", "twitter", "name"))
+
+You don't need to pass all of the columns to the ``column_order`` parameter. If you only pass a subset of the columns the remaining columns will be ordered based on the key order of the dictionary.
+
+After inserting a row like this, the ``dogs.last_rowid`` property will return the SQLite ``rowid`` assigned to the most recently inserted record.
+
+The ``dogs.last_pk`` property will return the last inserted primary key value, if you specified one. This can be very useful when writing code that creates foreign key or many-to-many relationships.
+
+Bulk inserts
+============
+
+If you have more than one record to insert, the ``insert_all()`` method is a much more efficient way of inserting them. Just like ``insert()`` it will automatically detect the columns that should be created, but it will inspect the first batch of 100 items to help decide what those column types should be.
+
+Use it like this:
+
+.. code-block:: python
+
+    dogs.insert_all([{
+        "id": 1,
+        "name": "Cleo",
+        "twitter": "cleopaws",
+        "age": 3,
+        "is_good_dog": True,
+    }, {
+        "id": 2,
+        "name": "Marnie",
+        "twitter": "MarnieTheDog",
+        "age": 16,
+        "is_good_dog": True,
+    }], pk="id", column_order=("id", "twitter", "name"))
+
+The column types used in the ``CREATE TABLE`` statement are automatically derived from the types of data in that first batch of rows. Any additional or missing columns in subsequent batches will be ignored.
+
+The function can accept an iterator or generator of rows and will commit them according to the batch size. The default batch size is 100, but you can specify a different size using the ``batch_size`` parameter:
+
+.. code-block:: python
+
+    db["big_table"].insert_all(({
+        "id": 1,
+        "name": "Name {}".format(i),
+    } for i in range(10000)), batch_size=1000)
+
+Upserting data
+==============
+
+Upserting allows you to insert records if they do not exist and update them if they DO exist, based on matching against their primary key.
+
+For example, given the dogs database you could upsert the record for Cleo like so:
+
+.. code-block:: python
+
+    dogs.upsert([{
+        "id": 1,
+        "name": "Cleo",
+        "twitter": "cleopaws",
+        "age": 4,
+        "is_good_dog": True,
+    }, pk="id", column_order=("id", "twitter", "name"))
+
+If a record exists with id=1, it will be updated to match those fields. If it does not exist it will be created.
+
+Note that the ``pk`` and ``column_order`` parameters here are optional if you are certain that the table has already been created. You should pass them if the table may not exist at the time the first upsert is performed.
+
+An ``upsert_all()`` method is also available, which behaves like ``insert_all()`` but performs upserts instead.
+
+.. _python_api_hash:
+
+Setting an ID based on the hash of the row contents
+===================================================
+
+Sometimes you will find yourself working with a dataset that includes rows that do not have a provided obvious ID, but where you would like to assign one so that you can later upsert into that table without creating duplicate records.
+
+In these cases, a useful technique is to create an ID that is derived from the sha1 hash of the row contents.
+
+``sqlite-utils`` can do this for you using the ``hash_id=`` option. For example::
+
+    db = sqlite_utils.Database("dogs.db")
+    db["dogs"].upsert({"name": "Cleo", "twitter": "cleopaws"}, hash_id="id")
+    print(list(db["dogs]))
+
+Outputs::
+
+    [{'id': 'f501265970505d9825d8d9f590bfab3519fb20b1', 'name': 'Cleo', 'twitter': 'cleopaws'}]
+
+If you are going to use that ID straight away, you can access it using ``last_pk``::
+
+    dog_id = db["dogs"].upsert({
+        "name": "Cleo",
+        "twitter": "cleopaws"
+    }, hash_id="id").last_pk
+    # dog_id is now "f501265970505d9825d8d9f590bfab3519fb20b1"
+
+Creating views
+==============
+
+The ``.create_view()`` method on the database class can be used to create a view:
+
+.. code-block:: python
+
+    db.create_view("good_dogs", """
+        select * from dogs where is_good_dog = 1
+    """)
+
+Storing JSON
+============
+
+SQLite has `excellent JSON support <https://www.sqlite.org/json1.html>`_, and ``sqlite-utils`` can help you take advantage of this: if you attempt to insert a value that can be represented as a JSON list or dictionary, ``sqlite-utils`` will create TEXT column and store your data as serialized JSON. This means you can quickly store even complex data structures in SQLite and query them using JSON features.
+
+For example:
+
+.. code-block:: python
+
+    db["niche_museums"].insert({
+        "name": "The Bigfoot Discovery Museum",
+        "url": "http://bigfootdiscoveryproject.com/"
+        "hours": {
+            "Monday": [11, 18],
+            "Wednesday": [11, 18],
+            "Thursday": [11, 18],
+            "Friday": [11, 18],
+            "Saturday": [11, 18],
+            "Sunday": [11, 18]
+        },
+        "address": {
+            "streetAddress": "5497 Highway 9",
+            "addressLocality": "Felton, CA",
+            "postalCode": "95018"
+        }
+    })
+    db.conn.execute("""
+        select json_extract(address, '$.addressLocality')
+        from niche_museums
+    """).fetchall()
+    # Returns [('Felton, CA',)]
+
+Introspection
+=============
+
+If you have loaded an existing table, you can use introspection to find out more about it::
+
+    >>> db["PlantType"]
+    <sqlite_utils.db.Table at 0x10f5960b8>
+
+The ``.count`` property shows the current number of rows (``select count(*) from table``)::
+
+    >>> db["PlantType"].count
+    3
+    >>> db["Street_Tree_List"].count
+    189144
+
+The ``.columns`` property shows the columns in the table::
+
+    >>> db["PlantType"].columns
+    [Column(cid=0, name='id', type='INTEGER', notnull=0, default_value=None, is_pk=1),
+     Column(cid=1, name='value', type='TEXT', notnull=0, default_value=None, is_pk=0)]
+
+The ``.foreign_keys`` property shows if the table has any foreign key relationships::
+
+    >>> db["Street_Tree_List"].foreign_keys
+    [ForeignKey(table='Street_Tree_List', column='qLegalStatus', other_table='qLegalStatus', other_column='id'),
+     ForeignKey(table='Street_Tree_List', column='qCareAssistant', other_table='qCareAssistant', other_column='id'),
+     ForeignKey(table='Street_Tree_List', column='qSiteInfo', other_table='qSiteInfo', other_column='id'),
+     ForeignKey(table='Street_Tree_List', column='qSpecies', other_table='qSpecies', other_column='id'),
+     ForeignKey(table='Street_Tree_List', column='qCaretaker', other_table='qCaretaker', other_column='id'),
+     ForeignKey(table='Street_Tree_List', column='PlantType', other_table='PlantType', other_column='id')]
+
+The ``.schema`` property outputs the table's schema as a SQL string::
+
+    >>> print(db["Street_Tree_List"].schema)
+    CREATE TABLE "Street_Tree_List" (
+    "TreeID" INTEGER,
+      "qLegalStatus" INTEGER,
+      "qSpecies" INTEGER,
+      "qAddress" TEXT,
+      "SiteOrder" INTEGER,
+      "qSiteInfo" INTEGER,
+      "PlantType" INTEGER,
+      "qCaretaker" INTEGER,
+      "qCareAssistant" INTEGER,
+      "PlantDate" TEXT,
+      "DBH" INTEGER,
+      "PlotSize" TEXT,
+      "PermitNotes" TEXT,
+      "XCoord" REAL,
+      "YCoord" REAL,
+      "Latitude" REAL,
+      "Longitude" REAL,
+      "Location" TEXT
+    ,
+    FOREIGN KEY ("PlantType") REFERENCES [PlantType](id),
+        FOREIGN KEY ("qCaretaker") REFERENCES [qCaretaker](id),
+        FOREIGN KEY ("qSpecies") REFERENCES [qSpecies](id),
+        FOREIGN KEY ("qSiteInfo") REFERENCES [qSiteInfo](id),
+        FOREIGN KEY ("qCareAssistant") REFERENCES [qCareAssistant](id),
+        FOREIGN KEY ("qLegalStatus") REFERENCES [qLegalStatus](id))
+
+The ``.indexes`` property shows you all indexes created for a table::
+
+    >>> db["Street_Tree_List"].indexes
+    [Index(seq=0, name='"Street_Tree_List_qLegalStatus"', unique=0, origin='c', partial=0, columns=['qLegalStatus']),
+     Index(seq=1, name='"Street_Tree_List_qCareAssistant"', unique=0, origin='c', partial=0, columns=['qCareAssistant']),
+     Index(seq=2, name='"Street_Tree_List_qSiteInfo"', unique=0, origin='c', partial=0, columns=['qSiteInfo']),
+     Index(seq=3, name='"Street_Tree_List_qSpecies"', unique=0, origin='c', partial=0, columns=['qSpecies']),
+     Index(seq=4, name='"Street_Tree_List_qCaretaker"', unique=0, origin='c', partial=0, columns=['qCaretaker']),
+     Index(seq=5, name='"Street_Tree_List_PlantType"', unique=0, origin='c', partial=0, columns=['PlantType'])]
+
+Enabling full-text search
+=========================
+
+You can enable full-text search on a table using ``.enable_fts(columns)``:
+
+.. code-block:: python
+
+    dogs.enable_fts(["name", "twitter"])
+
+You can then run searches using the ``.search()`` method:
+
+.. code-block:: python
+
+    rows = dogs.search("cleo")
+
+If you insert additional records into the table you will need to refresh the search index using ``populate_fts()``:
+
+.. code-block:: python
+
+    dogs.insert({
+        "id": 2,
+        "name": "Marnie",
+        "twitter": "MarnieTheDog",
+        "age": 16,
+        "is_good_dog": True,
+    }, pk="id")
+    dogs.populate_fts(["name", "twitter"])
+
+``.enable_fts()`` defaults to using `FTS5 <https://www.sqlite.org/fts5.html>`__. If you wish to use `FTS4 <https://www.sqlite.org/fts3.html>`__ instead, use the following:
+
+.. code-block:: python
+
+    dogs.enable_fts(["name", "twitter"], fts_version="FTS4")
+
+Optimizing a full-text search table
+===================================
+
+Once you have populated a FTS table you can optimize it to dramatically reduce its size like so:
+
+.. code-block:: python
+
+    dogs.optimize()
+
+This runs the following SQL::
+
+    INSERT INTO dogs_fts (dogs_fts) VALUES ("optimize");
+
+Creating indexes
+================
+
+You can create an index on a table using the ``.create_index(columns)`` method. The method takes a list of columns:
+
+.. code-block:: python
+
+    dogs.create_index(["is_good_dog"])
+
+By default the index will be named ``idx_{table-name}_{columns}`` - if you want to customize the name of the created index you can pass the ``index_name`` parameter::]
+
+.. code-block:: python
+
+    dogs.create_index(
+        ["is_good_dog", "age"],
+        index_name="good_dogs_by_age"
+    )
+
+Vacuum
+======
+
+You can optimize your database by running VACUUM against it like so:
+
+.. code-block:: python
+
+    Database("my_database.db").vacuum()
+
+</document_content>
+</document>
+</documents>
