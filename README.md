@@ -1,6 +1,6 @@
 # llm-docs
 
-This repo contains single file concatenated documentation for every released version of [LLM](https://llm.datasette.io/).
+This repo contains single file concatenated documentation for every released version of [LLM](https://llm.datasette.io/) and several other tools.
 
 You can use this to answer questions about your LLM version using this command:
 
