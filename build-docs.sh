@@ -62,7 +62,7 @@ fi
 # Create output directory
 mkdir -p "$OUTPUT_DIR"
 
-echo "Cloning repository..."
+echo "Cloning repository $REPO_URL"
 if ! git clone "$REPO_URL" "$TMP_DIR/repo" 2>/dev/null; then
     echo "Error: Failed to clone repository"
     cleanup
