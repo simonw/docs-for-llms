@@ -1,0 +1,22 @@
+{
+  "llm": {
+    "stable": "0.23",
+    "preview": "0.24a0"
+  },
+  "sqlite-utils": {
+    "stable": "3.38",
+    "preview": "3.38a0"
+  },
+  "s3-credentials": {
+    "stable": "0.16.1",
+    "preview": null
+  },
+  "datasette": {
+    "stable": "0.65.1",
+    "preview": "1.0a17"
+  },
+  "shot-scraper": {
+    "stable": "1.8",
+    "preview": null
+  }
+}
