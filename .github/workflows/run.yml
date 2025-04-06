@@ -10,7 +10,7 @@ permissions:
   contents: write
 
 jobs:
-  shot-scraper:
+  run:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
