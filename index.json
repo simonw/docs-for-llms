@@ -1,7 +1,7 @@
 {
   "llm": {
     "stable": "0.23",
-    "preview": "0.24a0"
+    "preview": "0.24a1"
   },
   "sqlite-utils": {
     "stable": "3.38",
