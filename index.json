@@ -7,6 +7,10 @@
     "stable": "3.38",
     "preview": "3.38a0"
   },
+  "datasette-plugins": {
+    "stable": "0.65.1",
+    "preview": "1.0a17"
+  },
   "s3-credentials": {
     "stable": "0.16.1",
     "preview": null
