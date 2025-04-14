@@ -2,16 +2,17 @@
 
 # Usage function
 print_usage() {
-    echo "Usage: $0 <git-repository-url> <output-directory-name>"
+    echo "Usage: $0 <git-repository-url> <output-directory-name> [-f file_path] [-f file_path] ..."
     echo
     echo "Example: $0 https://github.com/simonw/sqlite-utils sqlite-utils"
+    echo "Example with specific files: $0 https://github.com/simonw/sqlite-utils sqlite-utils -f docs/readme.md -f docs/installation.rst"
     echo
     echo "This script:"
     echo "  1. Creates a temporary directory for cloning the repository"
     echo "  2. Clones the specified repository"
     echo "  3. For each git tag:"
     echo "     - Creates a text file containing the processed documentation"
-    echo "     - Processes both .md and .rst files from the docs directory"
+    echo "     - Processes either specific files (if -f is used) or all .md and .rst files from the docs directory"
     echo "  4. Stores all output files in ./<output-directory-name>/"
 }
 
@@ -27,14 +28,40 @@ cleanup() {
     exit 1
 }
 
-# Validate arguments
-if [ "$#" -ne 2 ]; then
+# Check for minimum required arguments
+if [ "$#" -lt 2 ]; then
     print_usage
     exit 1
 fi
 
 REPO_URL="$1"
 OUTPUT_DIR_NAME="$2"
+shift 2  # Remove the first two arguments
+
+# Initialize an array for specific files
+SPECIFIC_FILES=()
+
+# Parse remaining arguments for -f options
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        -f)
+            if [[ -n "$2" && "$2" != -* ]]; then
+                SPECIFIC_FILES+=("$2")
+                shift 2
+            else
+                echo "Error: -f option requires a file path"
+                print_usage
+                exit 1
+            fi
+            ;;
+        *)
+            echo "Error: Unknown option: $1"
+            print_usage
+            exit 1
+            ;;
+    esac
+done
+
 CURRENT_DIR="$PWD"
 OUTPUT_DIR="$CURRENT_DIR/$OUTPUT_DIR_NAME"
 
@@ -101,13 +128,34 @@ for TAG in $TAGS; do
         continue
     fi
 
-    # Process documentation files
-    if find docs/ -type f \( -name "*.md" -o -name "*.rst" \) -print -quit | grep -q .; then
-        echo "Generating documentation for $TAG..."
-        files-to-prompt docs/ -e md -e rst -c > "$OUTPUT_FILE"
-        echo "Created $TAG.txt"
+    # Process specific files if provided, otherwise process all .md and .rst files
+    if [ ${#SPECIFIC_FILES[@]} -gt 0 ]; then
+        # Check if the specified files exist for this tag
+        FILES_EXIST=true
+        for FILE in "${SPECIFIC_FILES[@]}"; do
+            if [ ! -f "$FILE" ]; then
+                echo "Warning: File $FILE does not exist for tag $TAG"
+                FILES_EXIST=false
+                break
+            fi
+        done
+
+        if [ "$FILES_EXIST" = true ]; then
+            echo "Generating documentation for $TAG using specific files..."
+            files-to-prompt "${SPECIFIC_FILES[@]}" -c > "$OUTPUT_FILE"
+            echo "Created $TAG.txt"
+        else
+            echo "Warning: Skipping tag $TAG because one or more specified files do not exist"
+        fi
     else
-        echo "Warning: No .md or .rst files found in docs/ for tag $TAG"
+        # No specific files provided, use all .md and .rst files in docs/
+        if find docs/ -type f \( -name "*.md" -o -name "*.rst" \) -print -quit | grep -q .; then
+            echo "Generating documentation for $TAG using all .md and .rst files..."
+            files-to-prompt docs/ -e md -e rst -c > "$OUTPUT_FILE"
+            echo "Created $TAG.txt"
+        else
+            echo "Warning: No .md or .rst files found in docs/ for tag $TAG"
+        fi
     fi
 done
 
