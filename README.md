@@ -10,6 +10,15 @@ llm -f docs:llm 'how do I embed a binary file?'
 ```
 Asking more questions about the same documentation - or asking follow-up questions using `llm -c` or even `llm chat -c` - will benefit from OpenAI's token cache pricing.
 
+Projects represented here:
+
+- [datasette](https://github.com/simonw/datasette) (this is a large one)
+- `datasette-plugins` is the subset of that documentation needed for writing Datasette plugins
+- [llm](https://github.com/simonw/llm)
+- [s3-credentials](https://github.com/simonw/s3-credentials)
+- [shot-scraper](https://github.com/simonw/shot-scraper)
+- [sqlite-utils](https://github.com/simonw/sqlite-utils)
+
 Note that some of these files are a little large though:
 
 ```bash
