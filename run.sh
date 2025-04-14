@@ -7,8 +7,10 @@
 
 # Datasette plugin writing documentation
 ./build-docs.sh https://github.com/simonw/datasette datasette-plugins \
+  -f docs/authentication.rst \
   -f docs/plugins.rst \
   -f docs/plugin_hooks.rst \
   -f docs/testing_plugins.rst \
   -f docs/writing_plugins.rst \
-  -f docs/internals.rst
+  -f docs/internals.rst \
+  -f docs/events.rst
