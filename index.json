@@ -17,7 +17,7 @@
   },
   "llm": {
     "stable": "0.25",
-    "preview": "0.25a0"
+    "preview": "0.26a0"
   },
   "datasette": {
     "stable": "0.65.1",
