@@ -4,7 +4,7 @@
     "preview": "4.0a0"
   },
   "llm": {
-    "stable": "0.25",
+    "stable": "0.26",
     "preview": "0.26a1"
   },
   "datasette-plugins": {
