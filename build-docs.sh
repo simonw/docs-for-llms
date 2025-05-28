@@ -200,10 +200,13 @@ for TAG in $TAGS; do
         # Remove the initial -o
         find_args=("${find_args[@]:1}")
 
-        # Use process substitution and mapfile to handle filenames safely
-        mapfile -t FOUND_FILES < <(find "$DEFAULT_DOCS_DIR/" -maxdepth 10 -type f \( "${find_args[@]}" \) -print0 | sort -zV) || true # Handle potential find errors, don't exit
+        # Use zero-terminated file names in case there are any special characters
+        FOUND_FILES=()
+        while IFS= read -r -d '' file; do
+            FOUND_FILES+=("$file")
+        done < <(find "$DEFAULT_DOCS_DIR/" -maxdepth 10 -type f \( "${find_args[@]}" \) -print0 | sort -zV) || true # Handle potential find errors, don't exit
 
-        # Check if mapfile had issues or no files found
+        # Check if we had issues or no files found
         if [ ${#FOUND_FILES[@]} -eq 0 ]; then
              # Check if find command actually failed vs just finding nothing
              if [[ ${PIPESTATUS[0]} -ne 0 && ${PIPESTATUS[0]} -ne 1 ]]; then # find returns 1 if no files match sometimes
