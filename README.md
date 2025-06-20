@@ -27,4 +27,4 @@ curl -s 'https://raw.githubusercontent.com/simonw/docs-for-llms/refs/heads/main/
 ```
 > 152131
 
-That's 152,000 tokens - too large for `gpt-4o-mini` and potentially quite expensive to process.
+That's 152,000 tokens - too large for `gpt-4o-mini` and potentially quite expensive to process (but fits easily within the 1 million token limits of both the Gemini and the GPT-4.1 models).
