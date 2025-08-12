@@ -20,7 +20,7 @@
     "preview": null
   },
   "llm": {
-    "stable": "0.27",
+    "stable": "0.27.1",
     "preview": "0.26a1"
   }
 }
