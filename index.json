@@ -5,7 +5,7 @@
   },
   "datasette": {
     "stable": "0.65.1",
-    "preview": "1.0a19"
+    "preview": "1.0a20"
   },
   "shot-scraper": {
     "stable": "1.8",
@@ -13,7 +13,7 @@
   },
   "datasette-plugins": {
     "stable": "0.65.1",
-    "preview": "1.0a19"
+    "preview": "1.0a20"
   },
   "sqlite-utils": {
     "stable": "3.38",
