@@ -4,16 +4,16 @@
     "preview": "0.26a1"
   },
   "datasette": {
-    "stable": "0.65.1",
-    "preview": "1.0a20"
+    "stable": "0.65.2",
+    "preview": "1.0a21"
   },
   "shot-scraper": {
     "stable": "1.8",
     "preview": null
   },
   "datasette-plugins": {
-    "stable": "0.65.1",
-    "preview": "1.0a20"
+    "stable": "0.65.2",
+    "preview": "1.0a21"
   },
   "sqlite-utils": {
     "stable": "3.38",
