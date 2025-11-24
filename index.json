@@ -17,7 +17,7 @@
   },
   "sqlite-utils": {
     "stable": "3.38",
-    "preview": "4.0a0"
+    "preview": "4.0a1"
   },
   "s3-credentials": {
     "stable": "0.16.1",
