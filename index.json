@@ -1,6 +1,6 @@
 {
   "llm": {
-    "stable": "0.27.1",
+    "stable": "0.28",
     "preview": "0.26a1"
   },
   "datasette": {
