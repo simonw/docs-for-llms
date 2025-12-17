@@ -20,7 +20,7 @@
     "preview": "4.0a1"
   },
   "s3-credentials": {
-    "stable": "0.16.1",
+    "stable": "0.17",
     "preview": null
   }
 }
