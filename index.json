@@ -8,7 +8,7 @@
     "preview": "1.0a24"
   },
   "shot-scraper": {
-    "stable": "1.9",
+    "stable": "1.9.1",
     "preview": null
   },
   "datasette-plugins": {
