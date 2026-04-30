@@ -9,7 +9,7 @@
   },
   "llm": {
     "stable": "0.31",
-    "preview": "0.26a1"
+    "preview": "0.32a1"
   },
   "s3-credentials": {
     "stable": "0.17",
