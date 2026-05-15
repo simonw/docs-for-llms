@@ -1,11 +1,15 @@
 {
+  "datasette": {
+    "stable": "0.65.2",
+    "preview": "1.0a29"
+  },
   "sqlite-utils": {
     "stable": "3.39",
     "preview": "4.0a1"
   },
-  "datasette-plugins": {
-    "stable": "0.65.2",
-    "preview": "1.0a29"
+  "shot-scraper": {
+    "stable": "1.9.1",
+    "preview": null
   },
   "llm": {
     "stable": "0.31",
@@ -15,12 +19,8 @@
     "stable": "0.17",
     "preview": null
   },
-  "datasette": {
+  "datasette-plugins": {
     "stable": "0.65.2",
     "preview": "1.0a29"
-  },
-  "shot-scraper": {
-    "stable": "1.9.1",
-    "preview": null
   }
 }
