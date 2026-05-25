@@ -1,7 +1,7 @@
 {
   "datasette": {
     "stable": "0.65.2",
-    "preview": "1.0a29"
+    "preview": "1.0a30"
   },
   "sqlite-utils": {
     "stable": "3.39",
@@ -21,6 +21,6 @@
   },
   "datasette-plugins": {
     "stable": "0.65.2",
-    "preview": "1.0a29"
+    "preview": "1.0a30"
   }
 }
