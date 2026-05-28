@@ -1,5 +1,5 @@
 {
-  "datasette": {
+  "datasette-plugins": {
     "stable": "0.65.2",
     "preview": "1.0a30"
   },
@@ -7,20 +7,20 @@
     "stable": "3.39",
     "preview": "4.0a1"
   },
-  "shot-scraper": {
-    "stable": "1.9.1",
-    "preview": null
+  "datasette": {
+    "stable": "0.65.2",
+    "preview": "1.0a30"
   },
   "llm": {
     "stable": "0.31",
     "preview": "0.32a2"
   },
+  "shot-scraper": {
+    "stable": "1.9.1",
+    "preview": null
+  },
   "s3-credentials": {
     "stable": "0.17",
     "preview": null
-  },
-  "datasette-plugins": {
-    "stable": "0.65.2",
-    "preview": "1.0a30"
   }
 }
