@@ -13,7 +13,7 @@
   },
   "llm": {
     "stable": "0.31",
-    "preview": "0.32a2"
+    "preview": "0.32a3"
   },
   "shot-scraper": {
     "stable": "1.9.1",
