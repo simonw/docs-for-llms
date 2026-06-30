@@ -1,6 +1,6 @@
 {
   "shot-scraper": {
-    "stable": "1.9.1",
+    "stable": "1.10",
     "preview": null
   },
   "datasette-plugins": {
