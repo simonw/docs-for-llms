@@ -16,7 +16,7 @@
     "preview": "1.0a36"
   },
   "llm": {
-    "stable": "0.31",
+    "stable": "0.31.1",
     "preview": "0.32a3"
   },
   "s3-credentials": {
