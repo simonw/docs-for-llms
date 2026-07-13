@@ -1,6 +1,6 @@
 {
   "shot-scraper": {
-    "stable": "1.10",
+    "stable": "1.11",
     "preview": null
   },
   "datasette-plugins": {
@@ -8,7 +8,7 @@
     "preview": "1.0a36"
   },
   "sqlite-utils": {
-    "stable": "4.1",
+    "stable": "4.1.1",
     "preview": "4.0rc4"
   },
   "datasette": {
