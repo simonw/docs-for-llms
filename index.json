@@ -5,7 +5,7 @@
   },
   "datasette-plugins": {
     "stable": "0.65.2",
-    "preview": "1.0a36"
+    "preview": "1.0a37"
   },
   "sqlite-utils": {
     "stable": "4.1.1",
@@ -13,7 +13,7 @@
   },
   "datasette": {
     "stable": "0.65.2",
-    "preview": "1.0a36"
+    "preview": "1.0a37"
   },
   "llm": {
     "stable": "0.31.1",
