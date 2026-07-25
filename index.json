@@ -1,25 +1,25 @@
 {
-  "datasette": {
-    "stable": "0.65.2",
-    "preview": "1.0a37"
-  },
-  "sqlite-utils": {
-    "stable": "4.1.1",
-    "preview": "4.0rc4"
+  "s3-credentials": {
+    "stable": "0.17",
+    "preview": null
   },
   "llm": {
     "stable": "0.31.1",
     "preview": "0.32a3"
   },
-  "s3-credentials": {
-    "stable": "0.17",
-    "preview": null
+  "sqlite-utils": {
+    "stable": "4.1.1",
+    "preview": "4.0rc4"
   },
   "shot-scraper": {
     "stable": "1.11",
     "preview": null
   },
   "datasette-plugins": {
+    "stable": "0.65.2",
+    "preview": "1.0a37"
+  },
+  "datasette": {
     "stable": "0.65.2",
     "preview": "1.0a37"
   }
