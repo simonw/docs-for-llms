@@ -8,7 +8,7 @@
     "preview": "0.32rc2"
   },
   "sqlite-utils": {
-    "stable": "4.1.1",
+    "stable": "4.2.1",
     "preview": "4.0rc4"
   },
   "shot-scraper": {
