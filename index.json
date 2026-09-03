@@ -1,6 +1,6 @@
 {
   "llm": {
-    "stable": "0.33",
+    "stable": "0.34",
     "preview": "0.32rc2"
   },
   "shot-scraper": {
