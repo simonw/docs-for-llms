@@ -1,12 +1,4 @@
 {
-  "llm": {
-    "stable": "0.34",
-    "preview": "0.32rc2"
-  },
-  "shot-scraper": {
-    "stable": "1.11",
-    "preview": null
-  },
   "datasette-plugins": {
     "stable": "0.65.3",
     "preview": "1.0a38"
@@ -15,12 +7,20 @@
     "stable": "4.2.1",
     "preview": "4.0rc4"
   },
-  "datasette": {
-    "stable": "0.65.3",
-    "preview": "1.0a38"
-  },
   "s3-credentials": {
     "stable": "0.17",
     "preview": null
+  },
+  "llm": {
+    "stable": "0.34",
+    "preview": "0.32rc2"
+  },
+  "shot-scraper": {
+    "stable": "1.11",
+    "preview": null
+  },
+  "datasette": {
+    "stable": "0.65.3",
+    "preview": "1.0a38"
   }
 }
