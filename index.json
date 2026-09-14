@@ -16,7 +16,7 @@
     "preview": "0.32rc2"
   },
   "shot-scraper": {
-    "stable": "1.11",
+    "stable": "1.12",
     "preview": null
   },
   "datasette": {
