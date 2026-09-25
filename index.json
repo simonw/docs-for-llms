@@ -5,11 +5,11 @@
   },
   "datasette": {
     "stable": "0.65.5",
-    "preview": "1.0a40"
+    "preview": "1.0a41"
   },
   "datasette-plugins": {
     "stable": "0.65.5",
-    "preview": "1.0a40"
+    "preview": "1.0a41"
   },
   "shot-scraper": {
     "stable": "1.12",
