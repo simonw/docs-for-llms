@@ -16,7 +16,7 @@
     "preview": null
   },
   "llm": {
-    "stable": "0.37",
+    "stable": "0.37.1",
     "preview": "0.32rc2"
   },
   "sqlite-utils": {
